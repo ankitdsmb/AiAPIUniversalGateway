@@ -23,6 +23,7 @@ internal sealed class TestAdaptiveRoutingEngine : IAdaptiveRoutingEngine
         bool succeeded,
         TimeSpan latency,
         string? responsePayload,
+        int tokenUsage,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();

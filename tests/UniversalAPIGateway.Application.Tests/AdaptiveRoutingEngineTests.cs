@@ -64,7 +64,7 @@ public sealed class AdaptiveRoutingEngineTests
         var adapters = new IProviderAdapter[] { reliableProvider, newProvider };
 
         await SeedAsync(store, "reliable", TaskType.Chat, successRate: 0.9, latencyMs: 140, quality: 0.9);
-        await store.UpdateOutcomeAsync("new", TaskType.Chat, succeeded: true, TimeSpan.FromMilliseconds(80), qualityScore: 1.0, CancellationToken.None);
+        await store.UpdateOutcomeAsync("new", TaskType.Chat, succeeded: true, TimeSpan.FromMilliseconds(80), qualityScore: 1.0, tokenUsage: 120, CancellationToken.None);
 
         var selected = await engine.SelectAdapterAsync(adapters, new GatewayRequest(new ProviderKey("auto"), "hello how are you"), null, CancellationToken.None);
 
@@ -77,7 +77,7 @@ public sealed class AdaptiveRoutingEngineTests
         for (var i = 0; i < 10; i++)
         {
             var success = i < successSamples;
-            await store.UpdateOutcomeAsync(providerId, taskType, success, TimeSpan.FromMilliseconds(latencyMs), quality, CancellationToken.None);
+            await store.UpdateOutcomeAsync(providerId, taskType, success, TimeSpan.FromMilliseconds(latencyMs), quality, tokenUsage: 150, CancellationToken.None);
         }
     }
 

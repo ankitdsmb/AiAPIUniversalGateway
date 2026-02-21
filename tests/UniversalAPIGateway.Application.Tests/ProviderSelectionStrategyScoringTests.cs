@@ -52,7 +52,7 @@ public sealed class ProviderSelectionStrategyScoringTests
         public ValueTask<IProviderAdapter?> SelectAdapterAsync(IReadOnlyCollection<IProviderAdapter> adapters, GatewayRequest request, IReadOnlySet<IProviderAdapter>? excludedAdapters, CancellationToken cancellationToken) =>
             ValueTask.FromResult(selectedAdapter);
 
-        public ValueTask RecordOutcomeAsync(GatewayRequest request, string providerId, bool succeeded, TimeSpan latency, string? responsePayload, CancellationToken cancellationToken) =>
+        public ValueTask RecordOutcomeAsync(GatewayRequest request, string providerId, bool succeeded, TimeSpan latency, string? responsePayload, int tokenUsage, CancellationToken cancellationToken) =>
             ValueTask.CompletedTask;
     }
 }
