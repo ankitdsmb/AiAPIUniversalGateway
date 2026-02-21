@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using UniversalAPIGateway.Application.Abstractions;
 using UniversalAPIGateway.Domain.Ports;
 using UniversalAPIGateway.Infrastructure.Adapters;
 using UniversalAPIGateway.Infrastructure.Strategies;
@@ -12,7 +11,7 @@ public static class InfrastructureServiceCollectionExtensions
     {
         services.AddSingleton<IProviderAdapter, EchoProviderAdapter>();
         services.AddSingleton<IProviderAdapter, ReverseProviderAdapter>();
-        services.AddSingleton<IProviderSelectionStrategy, ProviderSelectionStrategy>();
+        services.AddSingleton<IProviderSelector, ProviderSelectionStrategy>();
         return services;
     }
 }
