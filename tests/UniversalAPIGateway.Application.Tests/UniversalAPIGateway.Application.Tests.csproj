@@ -26,6 +26,7 @@
     <ProjectReference Include="..\..\src\UniversalAPIGateway.Application\UniversalAPIGateway.Application.csproj" />
     <ProjectReference Include="..\..\src\UniversalAPIGateway.Domain\UniversalAPIGateway.Domain.csproj" />
       <ProjectReference Include="..\..\src\UniversalAPIGateway.Infrastructure\UniversalAPIGateway.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\UniversalAPIGateway.Api\UniversalAPIGateway.Api.csproj" />
   </ItemGroup>
 
 </Project>
