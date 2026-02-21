@@ -64,6 +64,7 @@ public sealed class FallbackHandler : IFallbackHandler
                     succeeded: true,
                     latency: stopwatch.Elapsed,
                     responsePayload: response.Result,
+                    tokenUsage: EstimateTokenUsage(request.Payload, response.Result),
                     cancellationToken);
 
                 return response;
@@ -82,6 +83,7 @@ public sealed class FallbackHandler : IFallbackHandler
                     succeeded: false,
                     latency: stopwatch.Elapsed,
                     responsePayload: null,
+                    tokenUsage: EstimateTokenUsage(request.Payload, null),
                     cancellationToken);
 
                 excludedAdapters.Add(currentAdapter);
@@ -96,4 +98,11 @@ public sealed class FallbackHandler : IFallbackHandler
             }
         }
     }
+    private static int EstimateTokenUsage(string requestPayload, string? responsePayload)
+    {
+        var requestTokens = Math.Max(1, requestPayload.Length / 4);
+        var responseTokens = string.IsNullOrEmpty(responsePayload) ? 0 : Math.Max(1, responsePayload.Length / 4);
+        return requestTokens + responseTokens;
+    }
+
 }
