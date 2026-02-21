@@ -15,6 +15,6 @@ public sealed class ResponseNormalizer : IResponseNormalizer
         }
 
         var normalizedResult = response.Result.Trim();
-        return response with { Result = normalizedResult };
+        return new GatewayResponse(response.ProviderKey, normalizedResult);
     }
 }

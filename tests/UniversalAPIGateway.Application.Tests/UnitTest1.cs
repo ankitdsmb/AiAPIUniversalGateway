@@ -42,6 +42,21 @@ public sealed class OrchestratorServiceTests
             sut.RouteAsync(new GatewayRequest(new ProviderKey("reverse"), "abc"), CancellationToken.None));
     }
 
+
+    [Fact]
+    public async Task RouteAsync_PropagatesOperationCanceledException_WhenCancellationRequested()
+    {
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var primary = new SuccessAdapter(new ProviderKey("reverse"), payload => payload);
+        var fallback = new SuccessAdapter(new ProviderKey("echo"), payload => payload);
+        var sut = CreateSut(primary, fallback);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            sut.RouteAsync(new GatewayRequest(new ProviderKey("reverse"), "abc"), cts.Token));
+    }
+
     private static OrchestratorService CreateSut(params IProviderAdapter[] adapters)
     {
         var strategy = new DefaultProviderSelectionStrategy();
