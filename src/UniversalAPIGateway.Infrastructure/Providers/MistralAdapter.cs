@@ -33,13 +33,6 @@ public sealed class MistralAdapter : HttpProviderAdapterBase
     protected override string ParseProviderResult(string responseBody)
     {
         using var document = ParseJson(responseBody);
-
-        return document.RootElement.TryGetProperty("choices", out var choices)
-            && choices.ValueKind == System.Text.Json.JsonValueKind.Array
-            && choices.GetArrayLength() > 0
-            && choices[0].TryGetProperty("message", out var message)
-            && message.TryGetProperty("content", out var content)
-            ? content.GetString() ?? string.Empty
-            : string.Empty;
+        return ParseChatCompletionsContent(document);
     }
 }
