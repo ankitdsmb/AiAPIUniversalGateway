@@ -25,4 +25,16 @@ public sealed class DomainModelsTests
         Assert.True(provider.Supports(ProviderCapability.TextGeneration));
         Assert.False(provider.Supports(ProviderCapability.Embeddings));
     }
+
+    [Fact]
+    public void GatewayRequest_Throws_WhenPayloadIsWhitespace()
+    {
+        Assert.Throws<ArgumentException>(() => new GatewayRequest(new ProviderKey("alpha"), "   "));
+    }
+
+    [Fact]
+    public void GatewayResponse_Throws_WhenProviderKeyIsMissing()
+    {
+        Assert.Throws<ArgumentException>(() => new GatewayResponse(" ", "content"));
+    }
 }
