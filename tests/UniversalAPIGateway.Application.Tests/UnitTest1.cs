@@ -59,9 +59,9 @@ public sealed class OrchestratorServiceTests
 
     private static OrchestratorService CreateSut(params IProviderAdapter[] adapters)
     {
-        var strategy = new DefaultProviderSelectionStrategy();
+        var strategy = new DefaultProviderSelectionStrategy(new TestProviderScoringService());
         var selectionEngine = new ProviderSelectionEngine(strategy);
-        var fallbackHandler = new FallbackHandler(selectionEngine);
+        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService());
         var responseNormalizer = new ResponseNormalizer();
 
         return new OrchestratorService(adapters, selectionEngine, fallbackHandler, responseNormalizer);

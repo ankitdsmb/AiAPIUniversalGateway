@@ -17,6 +17,7 @@ public static class InfrastructureServiceCollectionExtensions
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<PortkeyOptions>(configuration.GetSection(PortkeyOptions.SectionName));
+        services.Configure<ProviderIntelligenceOptions>(configuration.GetSection(ProviderIntelligenceOptions.SectionName));
         services.Configure<ProviderEndpointOptions>(OpenRouterAdapter.OptionsName, configuration.GetSection("Providers:OpenRouter"));
         services.Configure<ProviderEndpointOptions>(HuggingFaceAdapter.OptionsName, configuration.GetSection("Providers:HuggingFace"));
         services.Configure<ProviderEndpointOptions>(TogetherAIAdapter.OptionsName, configuration.GetSection("Providers:TogetherAI"));
@@ -76,6 +77,7 @@ public static class InfrastructureServiceCollectionExtensions
         var redisConnectionString = configuration.GetConnectionString("Redis") ?? "localhost:6379";
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
         services.AddSingleton<IQuotaService, RedisQuotaService>();
+        services.AddSingleton<IProviderScoringService, ProviderIntelligenceEngine>();
 
         var postgresConnectionString = configuration.GetConnectionString("PostgreSql")
             ?? "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=universal_gateway";
