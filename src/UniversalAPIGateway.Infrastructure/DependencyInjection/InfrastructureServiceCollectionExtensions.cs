@@ -22,6 +22,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.Configure<ProviderEndpointOptions>(TogetherAIAdapter.OptionsName, configuration.GetSection("Providers:TogetherAI"));
         services.Configure<ProviderEndpointOptions>(GroqAdapter.OptionsName, configuration.GetSection("Providers:Groq"));
         services.Configure<ProviderEndpointOptions>(ReplicateAdapter.OptionsName, configuration.GetSection("Providers:Replicate"));
+        services.Configure<ProviderEndpointOptions>(MistralAdapter.OptionsName, configuration.GetSection("Providers:Mistral"));
+        services.Configure<ProviderEndpointOptions>(AssemblyAIAdapter.OptionsName, configuration.GetSection("Providers:AssemblyAI"));
+        services.Configure<ProviderEndpointOptions>(FireworksAdapter.OptionsName, configuration.GetSection("Providers:Fireworks"));
+        services.Configure<ProviderEndpointOptions>(CohereAdapter.OptionsName, configuration.GetSection("Providers:Cohere"));
+        services.Configure<ProviderEndpointOptions>(GoogleAIStudioAdapter.OptionsName, configuration.GetSection("Providers:GoogleAIStudio"));
 
         services.AddSingleton<IProviderResiliencePolicies, ProviderResiliencePolicies>();
         services.AddHttpClient<PortkeyAdapter>((provider, client) =>
@@ -39,6 +44,16 @@ public static class InfrastructureServiceCollectionExtensions
             ConfigureClient(client, provider, GroqAdapter.OptionsName));
         services.AddHttpClient<ReplicateAdapter>((provider, client) =>
             ConfigureClient(client, provider, ReplicateAdapter.OptionsName));
+        services.AddHttpClient<MistralAdapter>((provider, client) =>
+            ConfigureClient(client, provider, MistralAdapter.OptionsName));
+        services.AddHttpClient<AssemblyAIAdapter>((provider, client) =>
+            ConfigureClient(client, provider, AssemblyAIAdapter.OptionsName));
+        services.AddHttpClient<FireworksAdapter>((provider, client) =>
+            ConfigureClient(client, provider, FireworksAdapter.OptionsName));
+        services.AddHttpClient<CohereAdapter>((provider, client) =>
+            ConfigureClient(client, provider, CohereAdapter.OptionsName));
+        services.AddHttpClient<GoogleAIStudioAdapter>((provider, client) =>
+            ConfigureClient(client, provider, GoogleAIStudioAdapter.OptionsName));
 
         services.AddSingleton<IProviderAdapter, EchoProviderAdapter>();
         services.AddSingleton<IProviderAdapter, ReverseProviderAdapter>();
@@ -50,6 +65,11 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<IProviderAdapter>(provider => provider.GetRequiredService<TogetherAIAdapter>());
         services.AddScoped<IProviderAdapter>(provider => provider.GetRequiredService<GroqAdapter>());
         services.AddScoped<IProviderAdapter>(provider => provider.GetRequiredService<ReplicateAdapter>());
+        services.AddScoped<IProviderAdapter>(provider => provider.GetRequiredService<MistralAdapter>());
+        services.AddScoped<IProviderAdapter>(provider => provider.GetRequiredService<AssemblyAIAdapter>());
+        services.AddScoped<IProviderAdapter>(provider => provider.GetRequiredService<FireworksAdapter>());
+        services.AddScoped<IProviderAdapter>(provider => provider.GetRequiredService<CohereAdapter>());
+        services.AddScoped<IProviderAdapter>(provider => provider.GetRequiredService<GoogleAIStudioAdapter>());
 
         services.AddSingleton<IProviderSelector, ProviderSelectionStrategy>();
 

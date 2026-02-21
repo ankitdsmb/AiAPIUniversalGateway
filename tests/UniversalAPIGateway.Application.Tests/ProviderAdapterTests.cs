@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Text;
 using Microsoft.Extensions.Options;
@@ -21,6 +22,12 @@ public sealed class ProviderAdapterTests
     [InlineData(typeof(TogetherAIAdapter), "{\"choices\":[{\"message\":{\"content\":\"together-result\"}}]}", "together")]
     [InlineData(typeof(GroqAdapter), "{\"choices\":[{\"message\":{\"content\":\"groq-result\"}}]}", "groq")]
     [InlineData(typeof(ReplicateAdapter), "{\"output\":[\"replicate-result\"]}", "replicate")]
+    [InlineData(typeof(MistralAdapter), "{\"choices\":[{\"message\":{\"content\":\"mistral-result\"}}]}", "mistral")]
+    [InlineData(typeof(AssemblyAIAdapter), "{\"text\":\"assembly-result\"}", "assemblyai")]
+    [InlineData(typeof(FireworksAdapter), "{\"choices\":[{\"message\":{\"content\":\"fireworks-result\"}}]}", "fireworks")]
+    [InlineData(typeof(CohereAdapter), "{\"message\":{\"content\":[{\"text\":\"cohere-result\"}]}}", "cohere")]
+    [InlineData(typeof(GoogleAIStudioAdapter), "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"google-result\"}]}}]}", "googleaistudio")]
+
     public async Task Adapter_MapsSuccessfulResponse(Type adapterType, string body, string providerKey)
     {
         var handler = new StaticResponseHandler(HttpStatusCode.OK, body);
@@ -72,10 +79,16 @@ public sealed class ProviderAdapterTests
             CreateAdapter(typeof(HuggingFaceAdapter), new StaticResponseHandler(HttpStatusCode.OK, "[{\"generated_text\":\"ok\"}]")),
             CreateAdapter(typeof(TogetherAIAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"choices\":[{\"message\":{\"content\":\"ok\"}}]}")),
             CreateAdapter(typeof(GroqAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"choices\":[{\"message\":{\"content\":\"ok\"}}]}")),
-            CreateAdapter(typeof(ReplicateAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"output\":\"ok\"}"))
+            CreateAdapter(typeof(ReplicateAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"output\":\"ok\"}")),
+            CreateAdapter(typeof(MistralAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"choices\":[{\"message\":{\"content\":\"ok\"}}]}")),
+            CreateAdapter(typeof(AssemblyAIAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"text\":\"ok\"}")),
+            CreateAdapter(typeof(FireworksAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"choices\":[{\"message\":{\"content\":\"ok\"}}]}")),
+            CreateAdapter(typeof(CohereAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"message\":{\"content\":[{\"text\":\"ok\"}]}}")),
+            CreateAdapter(typeof(GoogleAIStudioAdapter), new StaticResponseHandler(HttpStatusCode.OK, "{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"}]}}]}"))
         };
 
-        Assert.All(providers, adapter => Assert.True(adapter.Provider.Supports(ProviderCapability.TextGeneration)));
+        Assert.All(providers.Where(a => a.Provider.Key.Value != "assemblyai"), adapter => Assert.True(adapter.Provider.Supports(ProviderCapability.TextGeneration)));
+        Assert.True(providers.Single(a => a.Provider.Key.Value == "assemblyai").Provider.Supports(ProviderCapability.SpeechToText));
     }
 
     [Fact]
@@ -141,6 +154,7 @@ public sealed class ProviderAdapterTests
             Model = name switch
             {
                 var n when n == ReplicateAdapter.OptionsName => "owner/model",
+                var n when n == GoogleAIStudioAdapter.OptionsName => "gemini-1.5-flash",
                 _ => "unit-model"
             },
             TimeoutSeconds = timeoutSeconds,
