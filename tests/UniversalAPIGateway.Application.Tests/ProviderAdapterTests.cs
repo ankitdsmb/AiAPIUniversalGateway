@@ -16,6 +16,24 @@ namespace UniversalAPIGateway.Application.Tests;
 
 public sealed class ProviderAdapterTests
 {
+
+    public static IEnumerable<object[]> FreeTierAdapters()
+    {
+        yield return [typeof(MistralAdapter), "mistral"];
+        yield return [typeof(AssemblyAIAdapter), "assemblyai"];
+        yield return [typeof(FireworksAdapter), "fireworks"];
+        yield return [typeof(CohereAdapter), "cohere"];
+        yield return [typeof(GoogleAIStudioAdapter), "googleaistudio"];
+    }
+
+    public static IEnumerable<object[]> FreeTierAdapterTypes()
+    {
+        foreach (var adapter in FreeTierAdapters())
+        {
+            yield return [adapter[0]];
+        }
+    }
+
     [Theory]
     [InlineData(typeof(OpenRouterAdapter), "{\"choices\":[{\"message\":{\"content\":\"openrouter-result\"}}]}", "openrouter")]
     [InlineData(typeof(HuggingFaceAdapter), "[{\"generated_text\":\"hf-result\"}]", "huggingface")]
@@ -89,6 +107,43 @@ public sealed class ProviderAdapterTests
 
         Assert.All(providers.Where(a => a.Provider.Key.Value != "assemblyai"), adapter => Assert.True(adapter.Provider.Supports(ProviderCapability.TextGeneration)));
         Assert.True(providers.Single(a => a.Provider.Key.Value == "assemblyai").Provider.Supports(ProviderCapability.SpeechToText));
+    }
+
+
+    [Theory]
+    [MemberData(nameof(FreeTierAdapterTypes))]
+    public async Task FreeTierAdapter_TimeoutScenario_ThrowsTimeoutRejectedException(Type adapterType)
+    {
+        var optionsMonitor = new NamedProviderOptionsMonitor(timeoutSeconds: 1);
+        var handler = new DelayedResponseHandler(TimeSpan.FromSeconds(2));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://unit.test/") };
+        var resilience = new ProviderResiliencePolicies();
+        var healthTracker = new InMemoryProviderHealthTracker();
+
+        var adapter = (IProviderAdapter)Activator.CreateInstance(adapterType, httpClient, optionsMonitor, resilience, healthTracker)!;
+
+        await Assert.ThrowsAsync<TimeoutRejectedException>(() => adapter.ExecuteAsync("payload", CancellationToken.None));
+    }
+
+    [Theory]
+    [MemberData(nameof(FreeTierAdapters))]
+    public async Task FreeTierAdapter_QuotaExceededScenario_MarksProviderUnavailable(Type adapterType, string providerKey)
+    {
+        var healthTracker = new InMemoryProviderHealthTracker();
+        var adapter = CreateAdapter(adapterType, new StaticResponseHandler((HttpStatusCode)429, "quota exceeded"), healthTracker);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => adapter.ExecuteAsync("payload", CancellationToken.None));
+
+        Assert.Equal("quota_exceeded", healthTracker.GetState(providerKey));
+    }
+
+    [Theory]
+    [MemberData(nameof(FreeTierAdapterTypes))]
+    public async Task FreeTierAdapter_InvalidPayloadScenario_ThrowsInvalidOperationException(Type adapterType)
+    {
+        var adapter = CreateAdapter(adapterType, new StaticResponseHandler(HttpStatusCode.OK, "{}"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => adapter.ExecuteAsync("payload", CancellationToken.None));
     }
 
     [Fact]

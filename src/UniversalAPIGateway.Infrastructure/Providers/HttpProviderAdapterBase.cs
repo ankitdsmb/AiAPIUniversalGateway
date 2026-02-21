@@ -110,4 +110,15 @@ public abstract class HttpProviderAdapterBase : IProviderAdapter
     }
 
     protected static JsonDocument ParseJson(string json) => JsonDocument.Parse(json);
+
+    protected static string ParseChatCompletionsContent(JsonDocument document)
+    {
+        return document.RootElement.TryGetProperty("choices", out var choices)
+            && choices.ValueKind == JsonValueKind.Array
+            && choices.GetArrayLength() > 0
+            && choices[0].TryGetProperty("message", out var message)
+            && message.TryGetProperty("content", out var content)
+            ? content.GetString() ?? string.Empty
+            : string.Empty;
+    }
 }
