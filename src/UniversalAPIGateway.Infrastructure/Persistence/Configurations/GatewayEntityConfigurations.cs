@@ -51,6 +51,7 @@ public sealed class ProviderHealthEntityConfiguration : IEntityTypeConfiguration
 
         builder.HasIndex(x => x.ProviderId);
         builder.HasIndex(x => x.LastChecked);
+        builder.HasIndex(x => new { x.ProviderId, x.LastChecked });
 
         builder.HasOne(x => x.Provider)
             .WithMany(x => x.HealthChecks)
@@ -107,6 +108,8 @@ public sealed class GatewayResponseEntityConfiguration : IEntityTypeConfiguratio
         builder.HasIndex(x => x.RequestId);
         builder.HasIndex(x => x.ProviderId);
         builder.HasIndex(x => x.CreatedAt);
+        builder.HasIndex(x => new { x.ProviderId, x.CreatedAt });
+        builder.HasIndex(x => new { x.RequestId, x.CreatedAt });
 
         builder.HasOne(x => x.Request)
             .WithMany(x => x.Responses)
@@ -132,6 +135,7 @@ public sealed class ProviderTelemetryEntityConfiguration : IEntityTypeConfigurat
         builder.HasIndex(x => x.ProviderId);
         builder.HasIndex(x => x.TaskType);
         builder.HasIndex(x => x.Timestamp);
+        builder.HasIndex(x => new { x.ProviderId, x.Timestamp });
         builder.HasIndex(x => new { x.ProviderId, x.TaskType, x.Timestamp });
 
         builder.HasOne(x => x.Provider)
@@ -175,6 +179,7 @@ public sealed class RoutingDecisionEntityConfiguration : IEntityTypeConfiguratio
         builder.HasIndex(x => x.RequestId);
         builder.HasIndex(x => x.ChosenProviderId);
         builder.HasIndex(x => x.Timestamp);
+        builder.HasIndex(x => new { x.ChosenProviderId, x.Timestamp });
 
         builder.HasOne(x => x.Request)
             .WithMany(x => x.RoutingDecisions)
@@ -199,6 +204,7 @@ public sealed class ProviderFailureEntityConfiguration : IEntityTypeConfiguratio
 
         builder.HasIndex(x => x.ProviderId);
         builder.HasIndex(x => x.OccurredAt);
+        builder.HasIndex(x => new { x.ProviderId, x.OccurredAt });
 
         builder.HasOne(x => x.Provider)
             .WithMany(x => x.Failures)
