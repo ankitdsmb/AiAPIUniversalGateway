@@ -22,6 +22,20 @@ public sealed class ProviderRegistryServiceTests
         Assert.True(entry.IsEnabled);
     }
 
+
+    [Fact]
+    public async Task RegisterAsync_ThrottlesStaleSweepsWithinInterval()
+    {
+        var persistence = new CountingInMemoryPersistence();
+        var cache = new InMemoryCache();
+        var sut = CreateSut(persistence, cache, heartbeatTimeoutSeconds: 10, staleSweepIntervalSeconds: 60);
+
+        await sut.RegisterAsync(new ProviderRegistration("provider-a", "Provider A", "http://provider-a", new[] { "chat" }), CancellationToken.None);
+        await sut.RegisterAsync(new ProviderRegistration("provider-b", "Provider B", "http://provider-b", new[] { "chat" }), CancellationToken.None);
+
+        Assert.Equal(1, persistence.DisableStaleCalls);
+    }
+
     [Fact]
     public async Task HeartbeatAsync_ReturnsNull_WhenProviderMissing()
     {
@@ -37,7 +51,7 @@ public sealed class ProviderRegistryServiceTests
     {
         var persistence = new InMemoryPersistence();
         var cache = new InMemoryCache();
-        var sut = CreateSut(persistence, cache, heartbeatTimeoutSeconds: 10);
+        var sut = CreateSut(persistence, cache, heartbeatTimeoutSeconds: 10, staleSweepIntervalSeconds: 1);
 
         await sut.RegisterAsync(new ProviderRegistration("fresh", "Fresh", "http://fresh", new[] { "chat" }), CancellationToken.None);
 
@@ -51,6 +65,7 @@ public sealed class ProviderRegistryServiceTests
             DateTimeOffset.UtcNow.AddMinutes(-5));
         await cache.SetAsync(persistence.Entries["stale"], CancellationToken.None);
 
+        await Task.Delay(TimeSpan.FromSeconds(1.1));
         await sut.HeartbeatAsync("fresh", CancellationToken.None);
 
         Assert.False(persistence.Entries["stale"].IsEnabled);
@@ -60,19 +75,21 @@ public sealed class ProviderRegistryServiceTests
     private static ProviderRegistryService CreateSut(
         InMemoryPersistence persistence,
         InMemoryCache cache,
-        int heartbeatTimeoutSeconds = 90)
+        int heartbeatTimeoutSeconds = 90,
+        int staleSweepIntervalSeconds = 5)
     {
         var config = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ProviderRegistry:HeartbeatTimeoutSeconds"] = heartbeatTimeoutSeconds.ToString()
+                ["ProviderRegistry:HeartbeatTimeoutSeconds"] = heartbeatTimeoutSeconds.ToString(),
+                ["ProviderRegistry:StaleSweepIntervalSeconds"] = staleSweepIntervalSeconds.ToString()
             })
             .Build();
 
         return new ProviderRegistryService(persistence, cache, config);
     }
 
-    private sealed class InMemoryPersistence : IProviderRegistryPersistence
+    private class InMemoryPersistence : IProviderRegistryPersistence
     {
         public Dictionary<string, ProviderRegistryEntry> Entries { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -102,7 +119,7 @@ public sealed class ProviderRegistryServiceTests
             return Task.FromResult(true);
         }
 
-        public Task<IReadOnlyCollection<string>> DisableStaleAsync(DateTimeOffset staleBeforeUtc, CancellationToken cancellationToken)
+        public virtual Task<IReadOnlyCollection<string>> DisableStaleAsync(DateTimeOffset staleBeforeUtc, CancellationToken cancellationToken)
         {
             var disabled = new List<string>();
             foreach (var key in Entries.Keys.ToArray())
@@ -118,6 +135,17 @@ public sealed class ProviderRegistryServiceTests
             }
 
             return Task.FromResult((IReadOnlyCollection<string>)disabled);
+        }
+    }
+
+    private sealed class CountingInMemoryPersistence : InMemoryPersistence
+    {
+        public int DisableStaleCalls { get; private set; }
+
+        public override Task<IReadOnlyCollection<string>> DisableStaleAsync(DateTimeOffset staleBeforeUtc, CancellationToken cancellationToken)
+        {
+            DisableStaleCalls++;
+            return base.DisableStaleAsync(staleBeforeUtc, cancellationToken);
         }
     }
 
