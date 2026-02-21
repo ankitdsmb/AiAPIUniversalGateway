@@ -58,6 +58,35 @@ public sealed class QaValidationScenariosTests
         Assert.Equal("resilient", response.Result);
     }
 
+
+    [Fact]
+    public async Task FallbackFailure_UsesNextAvailableProvider()
+    {
+        var primary = new ThrowingAdapter(new ProviderKey("reverse"));
+        var firstFallback = new ThrowingAdapter(new ProviderKey("echo"));
+        var secondFallback = new SuccessAdapter(new ProviderKey("mock"), payload => $"ok::{payload}");
+        var sut = CreateOrchestrator(primary, firstFallback, secondFallback);
+
+        var response = await sut.RouteAsync(new GatewayRequest(new ProviderKey("reverse"), "resilient"), CancellationToken.None);
+
+        Assert.Equal("mock", response.ProviderKey);
+        Assert.Equal("ok::resilient", response.Result);
+    }
+
+    [Fact]
+    public void OrchestratorWithoutAdapters_ThrowsInvalidOperationException()
+    {
+        var strategy = new DefaultProviderSelectionStrategy();
+        var selectionEngine = new ProviderSelectionEngine(strategy);
+        var fallbackHandler = new FallbackHandler(selectionEngine);
+        var responseNormalizer = new ResponseNormalizer();
+
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            new OrchestratorService(Array.Empty<IProviderAdapter>(), selectionEngine, fallbackHandler, responseNormalizer));
+
+        Assert.Contains("At least one provider adapter", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task InvalidProviderResponse_ThrowsInvalidOperationException()
     {

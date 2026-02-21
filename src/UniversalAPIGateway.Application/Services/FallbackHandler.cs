@@ -12,20 +12,27 @@ public sealed class FallbackHandler(IProviderSelectionEngine selectionEngine) : 
         IProviderAdapter primaryAdapter,
         CancellationToken cancellationToken)
     {
-        try
-        {
-            return await primaryAdapter.ExecuteAsync(request.Payload, cancellationToken);
-        }
-        catch (Exception) when (!cancellationToken.IsCancellationRequested)
-        {
-            var fallbackAdapter = await selectionEngine.SelectFallbackAsync(adapters, request, primaryAdapter, cancellationToken);
+        var excludedAdapters = new HashSet<IProviderAdapter>(ReferenceEqualityComparer.Instance);
+        var currentAdapter = primaryAdapter;
 
-            if (fallbackAdapter is null)
+        while (true)
+        {
+            try
             {
-                throw;
+                return await currentAdapter.ExecuteAsync(request.Payload, cancellationToken);
             }
+            catch (Exception) when (!cancellationToken.IsCancellationRequested)
+            {
+                excludedAdapters.Add(currentAdapter);
 
-            return await fallbackAdapter.ExecuteAsync(request.Payload, cancellationToken);
+                var fallbackAdapter = await selectionEngine.SelectFallbackAsync(adapters, request, excludedAdapters, cancellationToken);
+                if (fallbackAdapter is null)
+                {
+                    throw;
+                }
+
+                currentAdapter = fallbackAdapter;
+            }
         }
     }
 }
