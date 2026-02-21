@@ -60,6 +60,50 @@ public sealed class PostgreSqlProviderRegistryRepository(string connectionString
         return ReadEntry(reader);
     }
 
+    public async Task<IReadOnlyCollection<ProviderRegistryEntry>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT provider_key, display_name, endpoint, capabilities, is_enabled, last_heartbeat_utc, updated_at_utc
+            FROM provider_registry;
+            """;
+
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await EnsureTableExistsAsync(connection, cancellationToken);
+
+        var entries = new List<ProviderRegistryEntry>();
+        await using var command = new NpgsqlCommand(sql, connection);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            entries.Add(ReadEntry(reader));
+        }
+
+        return entries;
+    }
+
+    public async Task<bool> SetEnabledAsync(string providerKey, bool isEnabled, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken)
+    {
+        const string sql = """
+            UPDATE provider_registry
+            SET is_enabled = @is_enabled,
+                updated_at_utc = @updated_at_utc
+            WHERE provider_key = @provider_key;
+            """;
+
+        await using var connection = new NpgsqlConnection(connectionString);
+        await connection.OpenAsync(cancellationToken);
+        await EnsureTableExistsAsync(connection, cancellationToken);
+
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("provider_key", providerKey);
+        command.Parameters.AddWithValue("is_enabled", isEnabled);
+        command.Parameters.AddWithValue("updated_at_utc", updatedAtUtc.UtcDateTime);
+
+        var affected = await command.ExecuteNonQueryAsync(cancellationToken);
+        return affected > 0;
+    }
+
     public async Task<IReadOnlyCollection<string>> DisableStaleAsync(DateTimeOffset staleBeforeUtc, CancellationToken cancellationToken)
     {
         const string sql = """

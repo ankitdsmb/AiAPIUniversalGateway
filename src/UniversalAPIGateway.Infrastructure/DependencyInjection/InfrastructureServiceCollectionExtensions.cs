@@ -7,6 +7,7 @@ using UniversalAPIGateway.Infrastructure.Adapters;
 using UniversalAPIGateway.Infrastructure.Configuration;
 using UniversalAPIGateway.Infrastructure.Policies;
 using UniversalAPIGateway.Infrastructure.Providers;
+using UniversalAPIGateway.Infrastructure.Jobs;
 using UniversalAPIGateway.Infrastructure.Repositories;
 using UniversalAPIGateway.Infrastructure.Services;
 using UniversalAPIGateway.Infrastructure.Strategies;
@@ -19,6 +20,7 @@ public static class InfrastructureServiceCollectionExtensions
     {
         services.Configure<PortkeyOptions>(configuration.GetSection(PortkeyOptions.SectionName));
         services.Configure<ProviderIntelligenceOptions>(configuration.GetSection(ProviderIntelligenceOptions.SectionName));
+        services.Configure<ProviderHealthLifecycleOptions>(configuration.GetSection(ProviderHealthLifecycleOptions.SectionName));
         services.Configure<ProviderEndpointOptions>(OpenRouterAdapter.OptionsName, configuration.GetSection("Providers:OpenRouter"));
         services.Configure<ProviderEndpointOptions>(HuggingFaceAdapter.OptionsName, configuration.GetSection("Providers:HuggingFace"));
         services.Configure<ProviderEndpointOptions>(TogetherAIAdapter.OptionsName, configuration.GetSection("Providers:TogetherAI"));
@@ -79,6 +81,9 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
         services.AddSingleton<IQuotaService, RedisQuotaService>();
         services.AddSingleton<IProviderScoringService, ProviderIntelligenceEngine>();
+        services.AddHostedService<ProviderHealthCheckJob>();
+        services.AddHostedService<ProviderRecoveryJob>();
+        services.AddHostedService<ScoreRecalculationJob>();
 
         var postgresConnectionString = configuration.GetConnectionString("PostgreSql")
             ?? "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=universal_gateway";
