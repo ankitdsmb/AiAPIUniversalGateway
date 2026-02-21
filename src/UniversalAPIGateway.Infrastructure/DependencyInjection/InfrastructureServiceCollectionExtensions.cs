@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
@@ -5,6 +6,7 @@ using UniversalAPIGateway.Application.Abstractions;
 using UniversalAPIGateway.Domain.Ports;
 using UniversalAPIGateway.Infrastructure.Adapters;
 using UniversalAPIGateway.Infrastructure.Configuration;
+using UniversalAPIGateway.Infrastructure.Persistence;
 using UniversalAPIGateway.Infrastructure.Policies;
 using UniversalAPIGateway.Infrastructure.Providers;
 using UniversalAPIGateway.Infrastructure.Jobs;
@@ -87,6 +89,9 @@ public static class InfrastructureServiceCollectionExtensions
 
         var postgresConnectionString = configuration.GetConnectionString("PostgreSql")
             ?? "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=universal_gateway";
+        services.AddDbContext<GatewayDbContext>(options =>
+            options.UseNpgsql(postgresConnectionString, npgsql =>
+                npgsql.MigrationsAssembly(typeof(GatewayDbContext).Assembly.FullName)));
         services.AddSingleton<IRequestLogRepository>(_ => new PostgreSqlRequestLogRepository(postgresConnectionString));
         services.AddSingleton<IProviderKeyRepository>(_ => new PostgreSqlProviderKeyRepository(postgresConnectionString));
         services.AddSingleton<IProviderRegistryPersistence>(_ => new PostgreSqlProviderRegistryRepository(postgresConnectionString));
