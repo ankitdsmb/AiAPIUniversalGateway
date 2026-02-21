@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\UniversalAPIGateway.Application\UniversalAPIGateway.Application.csproj" />
-    <ProjectReference Include="..\UniversalAPIGateway.Infrastructure\UniversalAPIGateway.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>
