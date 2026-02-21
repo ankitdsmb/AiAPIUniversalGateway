@@ -25,13 +25,13 @@ public sealed class DefaultProviderSelectionStrategy : IProviderSelectionStrateg
     public ValueTask<IProviderAdapter?> SelectFallbackAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
         GatewayRequest request,
-        IProviderAdapter failedAdapter,
+        IReadOnlySet<IProviderAdapter> excludedAdapters,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
         var fallback = adapters.FirstOrDefault(x =>
-            !ReferenceEquals(x, failedAdapter)
+            !excludedAdapters.Contains(x)
             && x.Provider.IsEnabled
             && x.Provider.Supports(ProviderCapability.TextGeneration));
 
