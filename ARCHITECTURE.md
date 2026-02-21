@@ -107,6 +107,7 @@ Target throughput ≈ 11.6 req/s sustained, with peak design at 20x (~230 req/s 
 
 ### Created artifacts
 - `ARCHITECTURE.md` (this file)
+- `ARCHITECT_DECISIONS.md` (persistent architecture memory and guardian checks)
 - `SERVICES.md` (service contracts, deployment and runtime responsibilities)
 
 ---
