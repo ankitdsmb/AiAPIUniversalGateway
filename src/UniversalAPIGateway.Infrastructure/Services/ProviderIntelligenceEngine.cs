@@ -10,6 +10,7 @@ namespace UniversalAPIGateway.Infrastructure.Services;
 public sealed class ProviderIntelligenceEngine(
     IConnectionMultiplexer multiplexer,
     IQuotaService quotaService,
+    IProviderHealthTracker providerHealthTracker,
     IOptions<ProviderIntelligenceOptions> options) : IProviderScoringService
 {
     private readonly IDatabase database = multiplexer.GetDatabase();
@@ -25,6 +26,12 @@ public sealed class ProviderIntelligenceEngine(
         }
 
         var providerId = provider.Key.Value;
+        var healthStatus = await providerHealthTracker.GetStatusAsync(providerId, cancellationToken);
+        if (healthStatus == ProviderHealthStatus.Disabled)
+        {
+            return double.NegativeInfinity;
+        }
+
         var healthKey = BuildHealthKey(providerId);
         var scoreKey = BuildScoreKey(providerId);
 
@@ -42,6 +49,11 @@ public sealed class ProviderIntelligenceEngine(
             + (quotaRemaining * scoringOptions.QuotaRemainingWeight)
             - (normalizedLatency * scoringOptions.LatencyWeight)
             - (normalizedFailures * scoringOptions.RecentFailuresWeight);
+
+        if (healthStatus == ProviderHealthStatus.Degraded)
+        {
+            score -= scoringOptions.RecentFailuresWeight;
+        }
 
         var tx = database.CreateTransaction();
         _ = tx.HashSetAsync(healthKey,

@@ -39,3 +39,25 @@ Tracked metrics:
 - Infrastructure: `ProviderIntelligenceEngine` handles Redis + quota integration.
 
 This keeps scoring implementation isolated while still enabling strategy-driven selection.
+
+## Provider Health Lifecycle (Self-Healing)
+
+The health lifecycle is now centralized and follows this state model:
+
+- `Healthy`
+- `Degraded`
+- `RateLimited`
+- `QuotaExceeded`
+- `Disabled`
+
+Lifecycle behavior:
+
+1. Adapters report failures/successes through `IProviderHealthTracker`.
+2. `ProviderHealthCheckJob` disables providers that cross failure threshold or are rate/quota limited.
+3. `ProviderRecoveryJob` waits for cooldown, then re-enables providers with enough successful retests.
+4. `ScoreRecalculationJob` recomputes scores periodically for enabled providers.
+
+Safety guarantees:
+
+- Disabled providers receive `-∞` score and are automatically excluded from auto-routing.
+- Health checks and recovery loops are background services and continue operating without manual intervention.

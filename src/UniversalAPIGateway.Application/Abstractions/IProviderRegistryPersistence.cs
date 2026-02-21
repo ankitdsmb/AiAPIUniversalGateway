@@ -6,6 +6,10 @@ public interface IProviderRegistryPersistence
 
     Task<ProviderRegistryEntry?> GetByKeyAsync(string providerKey, CancellationToken cancellationToken);
 
+    Task<IReadOnlyCollection<ProviderRegistryEntry>> GetAllAsync(CancellationToken cancellationToken);
+
+    Task<bool> SetEnabledAsync(string providerKey, bool isEnabled, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken);
+
     Task<IReadOnlyCollection<string>> DisableStaleAsync(DateTimeOffset staleBeforeUtc, CancellationToken cancellationToken);
 }
 
@@ -15,4 +19,3 @@ public interface IProviderRegistryCache
 
     Task RemoveAsync(string providerKey, CancellationToken cancellationToken);
 }
-
