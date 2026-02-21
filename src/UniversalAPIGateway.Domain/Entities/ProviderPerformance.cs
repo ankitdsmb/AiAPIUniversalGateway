@@ -6,8 +6,10 @@ public sealed record ProviderPerformance(
     double SuccessRate,
     TimeSpan Latency,
     double QualityScore,
+    double TokenUsage,
+    double FailureRate,
     long SampleSize = 0)
 {
     public static ProviderPerformance CreateDefault(string providerId, TaskType taskType) =>
-        new(providerId, taskType, SuccessRate: 0.5d, Latency: TimeSpan.FromMilliseconds(500), QualityScore: 0.5d, SampleSize: 0);
+        new(providerId, taskType, SuccessRate: 0.5d, Latency: TimeSpan.FromMilliseconds(500), QualityScore: 0.5d, TokenUsage: 180d, FailureRate: 0.5d, SampleSize: 0);
 }
