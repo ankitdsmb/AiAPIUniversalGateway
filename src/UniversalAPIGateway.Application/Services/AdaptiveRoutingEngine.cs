@@ -10,6 +10,8 @@ public sealed class AdaptiveRoutingEngine(
     IRandomSource randomSource) : IAdaptiveRoutingEngine
 {
     private const double ExplorationRate = 0.10d;
+    private const double ConfidenceSampleThreshold = 20d;
+    private const double BaselineScore = 0.5d;
 
     public async ValueTask<IProviderAdapter?> SelectAdapterAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
@@ -55,10 +57,17 @@ public sealed class AdaptiveRoutingEngine(
             return candidates[randomIndex].Adapter;
         }
 
-        return candidates
-            .OrderByDescending(static x => x.Score)
-            .First()
-            .Adapter;
+        var bestCandidate = candidates[0];
+        for (var i = 1; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
+            if (candidate.Score > bestCandidate.Score)
+            {
+                bestCandidate = candidate;
+            }
+        }
+
+        return bestCandidate.Adapter;
     }
 
     public async ValueTask RecordOutcomeAsync(
@@ -78,9 +87,12 @@ public sealed class AdaptiveRoutingEngine(
     private static double Score(ProviderPerformance performance)
     {
         var latencyScore = 1d / (1d + (performance.Latency.TotalMilliseconds / 1_000d));
-        return (performance.SuccessRate * 0.5d)
-               + (performance.QualityScore * 0.35d)
-               + (latencyScore * 0.15d);
+        var observedScore = (performance.SuccessRate * 0.5d)
+                            + (performance.QualityScore * 0.35d)
+                            + (latencyScore * 0.15d);
+
+        var confidence = Math.Clamp(performance.SampleSize / ConfidenceSampleThreshold, 0d, 1d);
+        return (observedScore * confidence) + (BaselineScore * (1d - confidence));
     }
 
     private static double ComputeQualityScore(bool succeeded, string? responsePayload)
