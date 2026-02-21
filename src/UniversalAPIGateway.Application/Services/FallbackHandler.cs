@@ -5,7 +5,10 @@ using UniversalAPIGateway.Domain.Ports;
 
 namespace UniversalAPIGateway.Application.Services;
 
-public sealed class FallbackHandler(IProviderSelectionEngine selectionEngine, IProviderScoringService providerScoringService) : IFallbackHandler
+public sealed class FallbackHandler(
+    IProviderSelectionEngine selectionEngine,
+    IProviderScoringService providerScoringService,
+    IAdaptiveRoutingEngine adaptiveRoutingEngine) : IFallbackHandler
 {
     public async Task<GatewayResponse> ExecuteAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
@@ -30,6 +33,14 @@ public sealed class FallbackHandler(IProviderSelectionEngine selectionEngine, IP
                     new RequestLog(Guid.NewGuid(), startedAt, currentAdapter.Provider.Key, true, stopwatch.Elapsed),
                     cancellationToken);
 
+                await adaptiveRoutingEngine.RecordOutcomeAsync(
+                    request,
+                    currentAdapter.Provider.Key.Value,
+                    succeeded: true,
+                    latency: stopwatch.Elapsed,
+                    responsePayload: response.Result,
+                    cancellationToken);
+
                 return response;
             }
             catch (Exception) when (!cancellationToken.IsCancellationRequested)
@@ -38,6 +49,14 @@ public sealed class FallbackHandler(IProviderSelectionEngine selectionEngine, IP
 
                 await providerScoringService.RecordOutcomeAsync(
                     new RequestLog(Guid.NewGuid(), startedAt, currentAdapter.Provider.Key, false, stopwatch.Elapsed),
+                    cancellationToken);
+
+                await adaptiveRoutingEngine.RecordOutcomeAsync(
+                    request,
+                    currentAdapter.Provider.Key.Value,
+                    succeeded: false,
+                    latency: stopwatch.Elapsed,
+                    responsePayload: null,
                     cancellationToken);
 
                 excludedAdapters.Add(currentAdapter);
