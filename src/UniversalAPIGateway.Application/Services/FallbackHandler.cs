@@ -27,6 +27,20 @@ public sealed class FallbackHandler : IFallbackHandler
         IProviderAdapter primaryAdapter,
         CancellationToken cancellationToken)
     {
+        ArgumentNullException.ThrowIfNull(adapters);
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(primaryAdapter);
+
+        if (adapters.Count == 0)
+        {
+            throw new InvalidOperationException("At least one provider adapter must be registered for fallback execution.");
+        }
+
+        if (!adapters.Contains(primaryAdapter))
+        {
+            throw new ArgumentException("The primary adapter must belong to the registered adapter collection.", nameof(primaryAdapter));
+        }
+
         var excludedAdapters = new HashSet<IProviderAdapter>(ReferenceEqualityComparer.Instance);
         var currentAdapter = primaryAdapter;
 

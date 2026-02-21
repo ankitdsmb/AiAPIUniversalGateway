@@ -116,6 +116,50 @@ public sealed class QaValidationScenariosTests
         Assert.True(stopwatch.Elapsed >= TimeSpan.FromMilliseconds(150));
     }
 
+    [Fact]
+    public async Task FallbackHandler_WithEmptyAdapters_ThrowsInvalidOperationException()
+    {
+        var strategy = new DefaultProviderSelectionStrategy(new TestAdaptiveRoutingEngine());
+        var selectionEngine = new ProviderSelectionEngine(strategy);
+        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService(), new TestAdaptiveRoutingEngine());
+        var request = new GatewayRequest(new ProviderKey("reverse"), "payload");
+        var primary = new SuccessAdapter(new ProviderKey("reverse"), payload => payload);
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            fallbackHandler.ExecuteAsync(Array.Empty<IProviderAdapter>(), request, primary, CancellationToken.None));
+
+        Assert.Contains("At least one provider adapter", error.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task FallbackHandler_WithNullRequest_ThrowsArgumentNullException()
+    {
+        var strategy = new DefaultProviderSelectionStrategy(new TestAdaptiveRoutingEngine());
+        var selectionEngine = new ProviderSelectionEngine(strategy);
+        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService(), new TestAdaptiveRoutingEngine());
+        var primary = new SuccessAdapter(new ProviderKey("reverse"), payload => payload);
+        var adapters = new IProviderAdapter[] { primary };
+
+        await Assert.ThrowsAsync<ArgumentNullException>(() =>
+            fallbackHandler.ExecuteAsync(adapters, null!, primary, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task FallbackHandler_WithPrimaryOutsideAdapterCollection_ThrowsArgumentException()
+    {
+        var strategy = new DefaultProviderSelectionStrategy(new TestAdaptiveRoutingEngine());
+        var selectionEngine = new ProviderSelectionEngine(strategy);
+        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService(), new TestAdaptiveRoutingEngine());
+        var registeredAdapter = new SuccessAdapter(new ProviderKey("reverse"), payload => payload);
+        var unregisteredPrimary = new SuccessAdapter(new ProviderKey("echo"), payload => payload);
+        var request = new GatewayRequest(new ProviderKey("reverse"), "payload");
+
+        var error = await Assert.ThrowsAsync<ArgumentException>(() =>
+            fallbackHandler.ExecuteAsync(new IProviderAdapter[] { registeredAdapter }, request, unregisteredPrimary, CancellationToken.None));
+
+        Assert.Equal("primaryAdapter", error.ParamName);
+    }
+
     private static OrchestratorService CreateOrchestrator(params IProviderAdapter[] adapters)
     {
         var strategy = new DefaultProviderSelectionStrategy(new TestAdaptiveRoutingEngine());
