@@ -1,20 +1,28 @@
-using UniversalAPIGateway.Application.Abstractions;
+using UniversalAPIGateway.Domain.Entities;
 using UniversalAPIGateway.Domain.Ports;
 
 namespace UniversalAPIGateway.Infrastructure.Strategies;
 
-public sealed class ProviderSelectionStrategy(IEnumerable<IProviderAdapter> adapters) : IProviderSelectionStrategy
+public sealed class ProviderSelectionStrategy : IProviderSelector
 {
-    private readonly IReadOnlyDictionary<string, IProviderAdapter> _adapters = adapters
-        .ToDictionary(x => x.ProviderKey, StringComparer.OrdinalIgnoreCase);
-
-    public IProviderAdapter Resolve(string providerKey)
+    public ValueTask<IProviderAdapter> SelectAsync(
+        IEnumerable<IProviderAdapter> adapters,
+        ProviderKey preferredProvider,
+        ProviderCapability requiredCapability,
+        CancellationToken cancellationToken)
     {
-        if (_adapters.TryGetValue(providerKey, out var adapter))
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var adapter = adapters.FirstOrDefault(x =>
+            x.Provider.Key.Value.Equals(preferredProvider.Value, StringComparison.OrdinalIgnoreCase)
+            && x.Provider.IsEnabled
+            && x.Provider.Supports(requiredCapability));
+
+        if (adapter is null)
         {
-            return adapter;
+            throw new InvalidOperationException($"Provider '{preferredProvider}' is not registered for capability '{requiredCapability}'.");
         }
 
-        throw new InvalidOperationException($"Provider '{providerKey}' is not registered.");
+        return ValueTask.FromResult(adapter);
     }
 }
