@@ -1,17 +1,30 @@
 using Microsoft.AspNetCore.Mvc;
+using UniversalAPIGateway.Api.Adapters;
+using UniversalAPIGateway.Api.Contracts;
 using UniversalAPIGateway.Application.Abstractions;
-using UniversalAPIGateway.Domain.Entities;
 
 namespace UniversalAPIGateway.Api.Controllers;
 
 [ApiController]
-[Route("api/gateway")]
-public sealed class GatewayController(IGatewayService gatewayService) : ControllerBase
+[Route("v1/ai")]
+public sealed class GatewayController(
+    IGatewayService gatewayService,
+    IGatewayRequestAdapter gatewayRequestAdapter) : ControllerBase
 {
-    [HttpPost("route")]
-    public async Task<ActionResult<GatewayResponse>> RouteAsync([FromBody] GatewayRequest request, CancellationToken cancellationToken)
+    [HttpPost("execute")]
+    public async Task<ActionResult<ExecuteAiResponse>> ExecuteAsync([FromBody] ExecuteAiRequest request, CancellationToken cancellationToken)
     {
-        var response = await gatewayService.RouteAsync(request, cancellationToken);
-        return Ok(response);
+        if (!gatewayRequestAdapter.TryAdapt(request, out var gatewayRequest, out var errors))
+        {
+            foreach (var error in errors)
+            {
+                ModelState.AddModelError(error.Key, string.Join(" ", error.Value));
+            }
+
+            return ValidationProblem(ModelState);
+        }
+
+        var gatewayResponse = await gatewayService.RouteAsync(gatewayRequest!, cancellationToken);
+        return Ok(new ExecuteAiResponse(gatewayResponse.ProviderKey, gatewayResponse.Result));
     }
 }
