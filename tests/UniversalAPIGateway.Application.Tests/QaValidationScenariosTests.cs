@@ -88,15 +88,15 @@ public sealed class QaValidationScenariosTests
     }
 
     [Fact]
-    public async Task InvalidProviderResponse_ThrowsInvalidOperationException()
+    public async Task InvalidProviderResponse_ThrowsArgumentNullException()
     {
         var primary = new SuccessAdapter(new ProviderKey("broken"), _ => null!);
         var sut = CreateOrchestrator(primary);
 
-        var error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var error = await Assert.ThrowsAsync<ArgumentNullException>(() =>
             sut.RouteAsync(new GatewayRequest(new ProviderKey("broken"), "payload"), CancellationToken.None));
 
-        Assert.Contains("empty response payload", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("result", error.ParamName, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
