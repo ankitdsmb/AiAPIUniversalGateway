@@ -163,6 +163,16 @@ Outcome: **Coupling reduced; boundaries remain clean**.
 
 ---
 
+
+## Validation Gates (per invariant)
+| Phase | Architecture Review | Code Review | QA Validation | Refactor | Transition Allowed |
+|---|---|---|---|---|---|
+| Step 1 — Discussion | ✅ Completed | ✅ Completed | ✅ Completed (design simulation) | ✅ Completed | ✅ Yes |
+| Step 2 — Implementation Docs | ✅ Completed | ✅ Completed | ✅ Completed (artifact consistency check) | ✅ Completed | ✅ Yes |
+| Step 3 — Code Review | ✅ Completed | ✅ Completed | ✅ Completed (review replay) | ✅ Completed | ✅ Yes |
+| Step 4 — QA Validation | ✅ Completed | ✅ Completed | ✅ Completed | ✅ Completed | ✅ Yes |
+| Step 5 — Refactor | ✅ Completed | ✅ Completed | ✅ Completed (regression on architecture constraints) | ✅ Completed | ✅ Yes |
+
 ## Exit Condition
 
 **Architecture approved.**
