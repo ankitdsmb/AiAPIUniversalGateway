@@ -14,6 +14,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IResponseNormalizer, ResponseNormalizer>();
         services.AddScoped<IOrchestratorService, OrchestratorService>();
         services.AddScoped<IGatewayService, GatewayService>();
+        services.AddScoped<IProviderRegistryService, ProviderRegistryService>();
         return services;
     }
 }

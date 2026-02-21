@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using StackExchange.Redis;
+using UniversalAPIGateway.Application.Abstractions;
 using UniversalAPIGateway.Domain.Ports;
 using UniversalAPIGateway.Infrastructure.Adapters;
 using UniversalAPIGateway.Infrastructure.Configuration;
@@ -83,6 +84,8 @@ public static class InfrastructureServiceCollectionExtensions
             ?? "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=universal_gateway";
         services.AddSingleton<IRequestLogRepository>(_ => new PostgreSqlRequestLogRepository(postgresConnectionString));
         services.AddSingleton<IProviderKeyRepository>(_ => new PostgreSqlProviderKeyRepository(postgresConnectionString));
+        services.AddSingleton<IProviderRegistryPersistence>(_ => new PostgreSqlProviderRegistryRepository(postgresConnectionString));
+        services.AddSingleton<IProviderRegistryCache, RedisProviderRegistryCache>();
 
         return services;
     }
