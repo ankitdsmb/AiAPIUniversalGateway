@@ -8,6 +8,11 @@ public static class ApplicationServiceCollectionExtensions
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddSingleton<ITaskClassifier, KeywordTaskClassifier>();
+        services.AddSingleton<IProviderPerformanceStore, InMemoryProviderPerformanceStore>();
+        services.AddSingleton<IRandomSource, SystemRandomSource>();
+        services.AddSingleton<IAdaptiveRoutingEngine, AdaptiveRoutingEngine>();
+
         services.AddScoped<IProviderSelectionStrategy, DefaultProviderSelectionStrategy>();
         services.AddScoped<IProviderSelectionEngine, ProviderSelectionEngine>();
         services.AddScoped<IFallbackHandler, FallbackHandler>();
