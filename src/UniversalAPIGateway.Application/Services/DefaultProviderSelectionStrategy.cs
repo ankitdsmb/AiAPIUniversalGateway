@@ -4,37 +4,75 @@ using UniversalAPIGateway.Domain.Ports;
 
 namespace UniversalAPIGateway.Application.Services;
 
-public sealed class DefaultProviderSelectionStrategy : IProviderSelectionStrategy
+public sealed class DefaultProviderSelectionStrategy(IProviderScoringService providerScoringService) : IProviderSelectionStrategy
 {
-    public ValueTask<IProviderAdapter> SelectPrimaryAsync(
+    private const string AutoProviderKey = "auto";
+
+    public async ValueTask<IProviderAdapter> SelectPrimaryAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
         GatewayRequest request,
         CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        if (request.ProviderKey.Value.Equals(AutoProviderKey, StringComparison.OrdinalIgnoreCase))
+        {
+            var bestAdapter = await SelectBestScoredAdapterAsync(
+                adapters,
+                ProviderCapability.TextGeneration,
+                excludedAdapters: null,
+                cancellationToken);
+
+            return bestAdapter ?? throw new InvalidOperationException("No eligible provider is available for automatic selection.");
+        }
 
         var adapter = adapters.FirstOrDefault(x =>
             x.Provider.Key.Value.Equals(request.ProviderKey.Value, StringComparison.OrdinalIgnoreCase)
             && x.Provider.IsEnabled);
 
         return adapter is null
-            ? ValueTask.FromException<IProviderAdapter>(new InvalidOperationException($"Provider '{request.ProviderKey}' is not registered."))
-            : ValueTask.FromResult(adapter);
+            ? throw new InvalidOperationException($"Provider '{request.ProviderKey}' is not registered.")
+            : adapter;
     }
 
     public ValueTask<IProviderAdapter?> SelectFallbackAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
         GatewayRequest request,
         IReadOnlySet<IProviderAdapter> excludedAdapters,
+        CancellationToken cancellationToken) =>
+        SelectBestScoredAdapterAsync(adapters, ProviderCapability.TextGeneration, excludedAdapters, cancellationToken);
+
+    private async ValueTask<IProviderAdapter?> SelectBestScoredAdapterAsync(
+        IReadOnlyCollection<IProviderAdapter> adapters,
+        ProviderCapability requiredCapability,
+        IReadOnlySet<IProviderAdapter>? excludedAdapters,
         CancellationToken cancellationToken)
     {
-        cancellationToken.ThrowIfCancellationRequested();
+        IProviderAdapter? bestAdapter = null;
+        var bestScore = double.NegativeInfinity;
 
-        var fallback = adapters.FirstOrDefault(x =>
-            !excludedAdapters.Contains(x)
-            && x.Provider.IsEnabled
-            && x.Provider.Supports(ProviderCapability.TextGeneration));
+        foreach (var adapter in adapters)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
 
-        return ValueTask.FromResult(fallback);
+            if (!adapter.Provider.IsEnabled || !adapter.Provider.Supports(requiredCapability))
+            {
+                continue;
+            }
+
+            if (excludedAdapters is not null && excludedAdapters.Contains(adapter))
+            {
+                continue;
+            }
+
+            var score = await providerScoringService.ScoreAsync(adapter.Provider, requiredCapability, cancellationToken);
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestAdapter = adapter;
+            }
+        }
+
+        return bestAdapter;
     }
 }
