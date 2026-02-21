@@ -18,3 +18,6 @@ TestResults/
 # OS files
 .DS_Store
 Thumbs.db
+
+appsettings.json
+appsettings.Development.json
