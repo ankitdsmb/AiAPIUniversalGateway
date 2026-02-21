@@ -1,121 +1,136 @@
 # Architecture Evolution Proposal Report
 
 ## Scope and guardrails
-- Language/runtime remains **C# on .NET 8**.
-- **Clean Architecture boundaries are preserved** (`Api -> Application -> Domain <- Infrastructure via ports`).
-- Evolution is **incremental**, **reversible**, and avoids full rewrites.
-- Priority order: **stability first**, then scalability.
+This proposal follows the project invariants:
+- Language lock remains **C# / .NET 8**.
+- **Clean Architecture** boundaries remain unchanged.
+- Evolution is **incremental**, **reversible**, and optimized for **stability-first** operation.
+- No full rewrite; only safe pressure-relief changes around current gateway/orchestrator topology.
 
 ---
 
 ## Step 1 — Production metrics analysis
 
-### Metric trend snapshot (from current telemetry model and operating targets)
-Based on the gateway telemetry dimensions already collected (latency/success/failure/task-type/token-usage) and the current scaling target of 1M req/day with ~230 req/s burst design:
+Based on the current architecture documents and adaptive routing telemetry loop, the system already tracks request outcomes, latency trends, and failure behavior per provider/task. The current stress profile indicates growth pressure at burst load windows rather than baseline load.
 
-| Metric | Current trend signal | Interpretation |
-|---|---|---|
-| Request growth | Upward and approaching burst envelope during peak windows | Capacity margin is shrinking at peak even if daily average is acceptable |
-| Latency trends | p95 tail inflation under peak (stable at baseline, degrades with concurrency) | Downstream/provider saturation and retry amplification are likely contributors |
-| Retries | Increased retry/fallback activations during short degradation windows | Resilience works, but extra retries are adding load and latency |
-| Queue depth | Pending post-processing/reconciliation work accumulates at spikes | Synchronous critical path is still healthy, but async backlog can spill into freshness delays |
-| CPU usage | API/orchestration nodes show burst-driven CPU hotspots | Scale-out triggers may be too late or not multi-signal enough |
-| Memory pressure | Moderate but rising during fallback storms | Transient object churn and buffered responses under failure paths |
+### Consolidated metric snapshot (current trend view)
+| Metric | Current trend | Pressure signal | Interpretation |
+|---|---|---|---|
+| Request growth | Sustained increase with periodic burst amplification | **Medium → High** | Current stateless services can scale, but burst control is now a first-class concern. |
+| Latency (p95) | Gradual upward drift during burst periods | **High** | Fallback + provider variance increases tail latency under contention. |
+| Retries / fallback attempts | Increasing retry/fallback ratio during degradation windows | **Medium** | Reliability is preserved, but additional hops are inflating response times. |
+| Queue depth (post-processing jobs) | Rising during spikes, normalizing slowly | **Medium** | Async side-work is approaching throughput limits in spike intervals. |
+| CPU usage (gateway/orchestrator replicas) | Frequent high utilization during bursts | **Medium → High** | Compute headroom is narrowing and may trigger throttling before autoscaling catches up. |
+| Memory pressure | Moderate baseline, spikes during concurrent fallback bursts | **Medium** | Object churn and concurrent in-flight requests raise GC pressure. |
 
-### Net assessment
-The system is not failing, but it is showing **pre-saturation behavior** under burst traffic and partial provider degradation.
+### Key conclusion
+The platform is still stable, but it is entering a **tail-latency and burst-handling stress phase** where reliability mechanisms (fallback/retries) are beginning to trade off against latency SLO margins.
 
 ---
 
-## Step 2 — Detected architecture stress signals
-1. **Retry amplification loop**: provider degradation causes retries/fallbacks, which increases load and worsens tail latency.
-2. **Control-plane coupling pressure**: scoring/health/reconciliation freshness competes with request-path resources during spikes.
-3. **Latency-tail sensitivity**: p95 is more volatile than average latency, signaling contention and queueing effects.
-4. **Elasticity lag**: CPU-only autoscaling is insufficiently predictive for latency and queue backlog stress.
+## Step 2 — Architecture stress signals detected
+
+1. **Tail-latency amplification:** fallback chains are preserving availability but extending p95/p99.
+2. **Control-plane coupling pressure:** scoring and telemetry updates compete with request-path resources under burst conditions.
+3. **Burst autoscaling lag risk:** CPU/queue signals indicate short windows where demand rises faster than replica warm-up.
+4. **Retry cascade risk:** when one provider degrades, retry/fallback volume increases load on remaining providers.
 
 ---
 
 ## Step 3 — Safe evolution proposal
 
-### 3.1 Scaling strategy (incremental)
-- Introduce **multi-signal autoscaling policy**: CPU + p95 latency + queue depth + 5xx ratio.
-- Set conservative step scaling to avoid oscillation (small replica increments, shorter cool-down for scale-out, longer for scale-in).
-- Keep API and orchestration stateless; no change to domain contracts.
+### A) Scaling strategy (incremental)
+1. **Dual-trigger autoscaling refinement**
+   - Keep CPU trigger, add stronger weighting for latency and queue depth.
+   - Reduce scale-out cooldown; increase scale-in cooldown to avoid oscillation.
+2. **Concurrency budgets by provider class**
+   - Add bounded in-flight request limits per provider adapter to prevent overload propagation.
+3. **Fallback budget control**
+   - Cap maximum fallback attempts per request type under live-degradation mode.
 
-### 3.2 Service split recommendation (safe seam, no rewrite)
-- Keep current runtime behavior, but extract a **background control-plane worker** for:
-  - provider score recalculation,
-  - provider health aggregation,
-  - reconciliation/reporting tasks.
-- Request path remains in existing API/Application flow; only async background duties move behind existing interfaces.
-- This is a **strangler-style split** of non-critical-path workloads, not a full microservice decomposition.
+### B) Service split recommendation (minimal, reversible)
+1. **Split scoring read-path from write-path logically first (not physically yet):**
+   - Read-path: fast score snapshot consumption for routing.
+   - Write-path: telemetry ingestion and aggregation updates.
+2. **Introduce optional background worker role for telemetry aggregation**
+   - Same codebase/contracts, separate deployment unit enabled by feature flag.
+   - Rollback: collapse back to current single-process behavior.
 
-### 3.3 Caching improvements
-- Add/strengthen **short TTL cache** for provider registry + provider health summaries.
-- Add cache stampede protection (single-flight lock per provider/task key).
-- Keep cache invalidation event-driven where possible, with fallback TTL expiry for safety.
+### C) Caching improvements
+1. **Provider score snapshot cache (short TTL, e.g., 5–15s)**
+   - Isolate routing from transient scoring store slowness.
+2. **Policy/quota read-through cache hardening**
+   - Pre-warm high-traffic tenant policies.
+   - Add stale-while-revalidate for non-critical policy metadata.
+3. **Capability metadata cache normalization**
+   - Prevent repeated provider capability recomputation per request.
 
-### 3.4 Async pipeline improvements
-- Move non-blocking audit/analytics/reconciliation writes onto a queue-backed worker path.
-- Add bounded queues with clear backpressure policy (drop non-critical analytics first, never drop quota integrity events).
-- Add dead-letter handling and replay tooling for safe recovery.
+### D) Async pipeline improvements
+1. **Buffer telemetry write operations with bounded channel/queue**
+   - Request path records intent quickly; worker persists/aggregates asynchronously.
+2. **Idempotent outcome events**
+   - Deduplicate duplicate retry outcome updates to reduce metric skew and write load.
+3. **Priority lanes**
+   - Keep user-response path highest priority; relegate analytics enrichments to low-priority lane.
 
 ---
 
 ## Step 4 — Risk analysis
 
-| Risk area | Risk level | Why | Mitigation | Rollback safety |
-|---|---|---|---|---|
-| Migration risk | Medium | New worker/queue and autoscaling tuning introduce operational complexity | Feature flags, canary rollout, expand-contract for schema changes | Immediate disable of worker path and fallback to current synchronous behavior |
-| Rollback safety | Low | Proposed changes are additive and interface-preserving | Keep old code path enabled until parity verified | One-switch rollback per feature flag |
-| Architecture consistency | Low | Domain/Application contracts remain unchanged | Enforce dependency rules and composition-root validation in CI | Revert composition registration only |
+| Risk area | Risk level | Mitigation | Rollback safety |
+|---|---|---|---|
+| Migration risk | Medium | Enable each change behind feature flags and deploy one slice at a time. | Disable flags, revert to current routing/execution flow. |
+| Runtime instability | Medium | Canary rollout with SLO guardrails (p95, error rate, retry ratio). | Immediate traffic shift back to stable replica group. |
+| Data consistency (telemetry) | Low → Medium | Idempotency keys + at-least-once safe consumers. | Fall back to synchronous writes if async worker degrades. |
+| Architecture consistency | Low | Maintain existing interfaces/ports; no layer boundary violations. | Code-level rollback via contract-preserving toggles. |
 
 ---
 
 ## Step 5 — Evolution scoring
-Using `ScalabilityGain × StabilityImpact − ComplexityCost` on a 1..5 relative scale:
 
-- ScalabilityGain = **4.0** (multi-signal scaling + async control-plane isolation)
-- StabilityImpact = **4.5** (reduced retry storms on hot path, better backlog control)
-- ComplexityCost = **2.5** (moderate ops/config complexity increase)
+Scoring model: **ScalabilityGain × StabilityImpact − ComplexityCost**
 
-**Score = 4.0 × 4.5 − 2.5 = 15.5**
+| Proposal slice | ScalabilityGain (1–5) | StabilityImpact (1–5) | ComplexityCost (1–5) | Score |
+|---|---:|---:|---:|---:|
+| Autoscaling + concurrency budgets | 4 | 5 | 2 | **18** |
+| Logical split (score read/write + worker role) | 4 | 4 | 3 | **13** |
+| Cache hardening | 3 | 4 | 2 | **10** |
+| Async telemetry channel + idempotency | 4 | 4 | 3 | **13** |
 
-Interpretation: strong positive evolution value with acceptable complexity tradeoff.
+### Prioritization order
+1. Autoscaling + concurrency budgets
+2. Cache hardening
+3. Async telemetry channel
+4. Logical split into optional worker deployment
 
 ---
 
 ## Step 6 — Phased rollout plan
 
-### Phase 0 — Baseline hardening (1 sprint)
-- Define SLOs and alert thresholds for p95 latency, retries, queue depth, CPU, memory.
-- Add dashboards for retry amplification and fallback-rate correlation.
-- No behavior changes yet.
+### Phase 0 — Baseline hardening (Week 0)
+- Freeze baseline SLO dashboard (p50/p95 latency, retry ratio, queue depth, CPU/memory).
+- Add explicit alert thresholds for fallback-rate spikes and queue backlog age.
 
-### Phase 1 — Safe toggles + observability (1 sprint)
-- Introduce feature flags for:
-  - queue-based post-processing,
-  - control-plane worker activation,
-  - cache TTL profile.
-- Deploy dark/inactive; verify telemetry and no regressions.
+### Phase 1 — Low-risk controls (Week 1)
+- Deploy autoscaling trigger tuning and fallback budget caps behind flags.
+- Canary to 10% traffic, then 25%, then 50%, then 100% if SLOs hold.
 
-### Phase 2 — Control-plane offload (1–2 sprints)
-- Activate worker for scoring/health/reconciliation in canary slice.
-- Keep synchronous fallback path enabled.
-- Success gate: no increase in error ratio, p95 improvement under peak.
+### Phase 2 — Cache improvements (Week 2)
+- Enable score snapshot cache and policy read-through improvements.
+- Validate cache-hit ratio and stale-read tolerance under synthetic bursts.
 
-### Phase 3 — Autoscaling policy upgrade (1 sprint)
-- Enable multi-signal HPA/scale rules progressively.
-- Tune thresholds from canary data; prevent thrash via hysteresis.
+### Phase 3 — Async telemetry buffering (Week 3)
+- Introduce bounded channel for outcome writes.
+- Activate idempotency keys and compare scoring drift vs baseline.
 
-### Phase 4 — Cache and queue tuning (ongoing)
-- Tune TTLs, queue bounds, and consumer concurrency.
-- Add runbooks for DLQ replay and emergency disable.
+### Phase 4 — Optional worker-role split (Week 4)
+- Deploy telemetry aggregation worker as a separate scalable unit.
+- Keep synchronous compatibility mode available for instant rollback.
 
-### Rollback plan (all phases)
-- Disable feature flags in reverse order.
-- Keep previous composition and synchronous flows deployable.
-- No destructive schema removals until post-stabilization window.
+### Exit criteria
+- p95 latency non-regressing vs baseline at equivalent load.
+- Retry/fallback ratio reduced or stable during provider degradations.
+- No architecture boundary violations or contract churn.
 
 ---
 
@@ -123,11 +138,14 @@ Interpretation: strong positive evolution value with acceptable complexity trade
 
 | Rule | Validation |
 |---|---|
-| .NET 8 / C# lock | Preserved |
-| Clean Architecture | Preserved; no domain leakage |
-| Safe evolution | Additive, seam-based changes only |
-| Incremental change | Phased rollout with canary gates |
-| Rollback always possible | Feature-flag + parallel path strategy |
-| Stability over speed | Conservative scaling and fallback-first policy |
+| .NET 8 / C# only | ✅ No language/runtime change proposed. |
+| Clean Architecture mandatory | ✅ Changes stay at infrastructure + operational topology edges; ports/interfaces preserved. |
+| Safe evolution only | ✅ Feature-flagged, phased, canary-first rollout. |
+| Incremental changes | ✅ Independent slices with measurable outcomes per phase. |
+| Rollback always possible | ✅ Every phase has explicit rollback switch/path. |
+| Stability over speed | ✅ Tail-latency and reliability guardrails govern promotion. |
 
-**Final recommendation**: proceed with phased, additive evolution focused on control-plane offload + multi-signal autoscaling + bounded async pipelines. Avoid broad service decomposition until these changes stabilize and metrics confirm sustained benefit.
+---
+
+## Final recommendation
+Proceed with a **four-phase incremental evolution** focused on burst resilience and tail-latency control, while preserving current architecture and contracts. This relieves scaling pressure without a structural rewrite and keeps rollback immediate at each phase.
