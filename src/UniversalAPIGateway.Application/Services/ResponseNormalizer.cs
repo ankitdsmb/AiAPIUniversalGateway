@@ -9,6 +9,11 @@ public sealed class ResponseNormalizer : IResponseNormalizer
     {
         ArgumentNullException.ThrowIfNull(response);
 
+        if (string.IsNullOrWhiteSpace(response.Result))
+        {
+            throw new InvalidOperationException("Provider returned an empty response payload.");
+        }
+
         var normalizedResult = response.Result.Trim();
         return response with { Result = normalizedResult };
     }
