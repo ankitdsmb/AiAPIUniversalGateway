@@ -13,6 +13,6 @@ public interface IProviderSelectionStrategy
     ValueTask<IProviderAdapter?> SelectFallbackAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
         GatewayRequest request,
-        IProviderAdapter failedAdapter,
+        IReadOnlySet<IProviderAdapter> excludedAdapters,
         CancellationToken cancellationToken);
 }

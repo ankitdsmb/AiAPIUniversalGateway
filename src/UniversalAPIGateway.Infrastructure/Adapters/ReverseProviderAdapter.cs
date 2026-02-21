@@ -10,12 +10,10 @@ public sealed class ReverseProviderAdapter : IProviderAdapter
         "Reverse Provider",
         ProviderCapability.TextGeneration);
 
-    public async Task<GatewayResponse> ExecuteAsync(string payload, CancellationToken cancellationToken)
+    public Task<GatewayResponse> ExecuteAsync(string payload, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await Task.Yield();
-
         var reversed = new string(payload.Reverse().ToArray());
-        return new GatewayResponse(Provider.Key.Value, reversed);
+        return Task.FromResult(new GatewayResponse(Provider.Key.Value, reversed));
     }
 }
