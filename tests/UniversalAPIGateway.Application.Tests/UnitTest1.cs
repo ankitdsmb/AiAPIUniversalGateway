@@ -4,14 +4,14 @@ using UniversalAPIGateway.Domain.Ports;
 
 namespace UniversalAPIGateway.Application.Tests;
 
-public sealed class GatewayServiceTests
+public sealed class OrchestratorServiceTests
 {
     [Fact]
-    public async Task RouteAsync_UsesConfiguredProvider()
+    public async Task RouteAsync_UsesPrimaryAdapter_WhenPrimarySucceeds()
     {
-        var adapter = new TestAdapter(new ProviderKey("reverse"));
-        var strategy = new TestSelector(adapter);
-        var sut = new GatewayService(new[] { adapter }, strategy);
+        var primary = new SuccessAdapter(new ProviderKey("reverse"), payload => new string(payload.Reverse().ToArray()));
+        var fallback = new SuccessAdapter(new ProviderKey("echo"), payload => payload);
+        var sut = CreateSut(primary, fallback);
 
         var response = await sut.RouteAsync(new GatewayRequest(new ProviderKey("reverse"), "abc"), CancellationToken.None);
 
@@ -19,21 +19,52 @@ public sealed class GatewayServiceTests
         Assert.Equal("cba", response.Result);
     }
 
-    private sealed class TestSelector(IProviderAdapter adapter) : IProviderSelector
+    [Fact]
+    public async Task RouteAsync_FallsBack_WhenPrimaryThrows()
     {
-        public ValueTask<IProviderAdapter> SelectAsync(
-            IEnumerable<IProviderAdapter> adapters,
-            ProviderKey preferredProvider,
-            ProviderCapability requiredCapability,
-            CancellationToken cancellationToken) =>
-            ValueTask.FromResult(adapter);
+        var primary = new ThrowingAdapter(new ProviderKey("reverse"));
+        var fallback = new SuccessAdapter(new ProviderKey("echo"), payload => $"  {payload}  ");
+        var sut = CreateSut(primary, fallback);
+
+        var response = await sut.RouteAsync(new GatewayRequest(new ProviderKey("reverse"), "abc"), CancellationToken.None);
+
+        Assert.Equal("echo", response.ProviderKey);
+        Assert.Equal("abc", response.Result);
     }
 
-    private sealed class TestAdapter(ProviderKey key) : IProviderAdapter
+    [Fact]
+    public async Task RouteAsync_Throws_WhenNoFallbackAvailable()
     {
-        public Provider Provider { get; } = new(key, "test", ProviderCapability.TextGeneration);
+        var primary = new ThrowingAdapter(new ProviderKey("reverse"));
+        var sut = CreateSut(primary);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.RouteAsync(new GatewayRequest(new ProviderKey("reverse"), "abc"), CancellationToken.None));
+    }
+
+    private static OrchestratorService CreateSut(params IProviderAdapter[] adapters)
+    {
+        var strategy = new DefaultProviderSelectionStrategy();
+        var selectionEngine = new ProviderSelectionEngine(strategy);
+        var fallbackHandler = new FallbackHandler(selectionEngine);
+        var responseNormalizer = new ResponseNormalizer();
+
+        return new OrchestratorService(adapters, selectionEngine, fallbackHandler, responseNormalizer);
+    }
+
+    private sealed class SuccessAdapter(ProviderKey key, Func<string, string> responseFactory) : IProviderAdapter
+    {
+        public Provider Provider { get; } = new(key, key.Value, ProviderCapability.TextGeneration);
 
         public Task<GatewayResponse> ExecuteAsync(string payload, CancellationToken cancellationToken) =>
-            Task.FromResult(new GatewayResponse(Provider.Key.Value, new string(payload.Reverse().ToArray())));
+            Task.FromResult(new GatewayResponse(Provider.Key.Value, responseFactory(payload)));
+    }
+
+    private sealed class ThrowingAdapter(ProviderKey key) : IProviderAdapter
+    {
+        public Provider Provider { get; } = new(key, key.Value, ProviderCapability.TextGeneration);
+
+        public Task<GatewayResponse> ExecuteAsync(string payload, CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Primary provider failed.");
     }
 }
