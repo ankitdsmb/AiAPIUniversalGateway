@@ -76,9 +76,9 @@ public sealed class QaValidationScenariosTests
     [Fact]
     public void OrchestratorWithoutAdapters_ThrowsInvalidOperationException()
     {
-        var strategy = new DefaultProviderSelectionStrategy(new TestProviderScoringService());
+        var strategy = new DefaultProviderSelectionStrategy(new TestAdaptiveRoutingEngine());
         var selectionEngine = new ProviderSelectionEngine(strategy);
-        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService());
+        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService(), new TestAdaptiveRoutingEngine());
         var responseNormalizer = new ResponseNormalizer();
 
         var error = Assert.Throws<InvalidOperationException>(() =>
@@ -118,9 +118,9 @@ public sealed class QaValidationScenariosTests
 
     private static OrchestratorService CreateOrchestrator(params IProviderAdapter[] adapters)
     {
-        var strategy = new DefaultProviderSelectionStrategy(new TestProviderScoringService());
+        var strategy = new DefaultProviderSelectionStrategy(new TestAdaptiveRoutingEngine());
         var selectionEngine = new ProviderSelectionEngine(strategy);
-        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService());
+        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService(), new TestAdaptiveRoutingEngine());
         var responseNormalizer = new ResponseNormalizer();
 
         return new OrchestratorService(adapters, selectionEngine, fallbackHandler, responseNormalizer);

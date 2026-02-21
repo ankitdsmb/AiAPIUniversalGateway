@@ -151,9 +151,9 @@ public sealed class ProviderAdapterTests
     {
         var failing = CreateAdapter(typeof(OpenRouterAdapter), new StaticResponseHandler(HttpStatusCode.InternalServerError, "oops"));
         var fallback = new EchoProviderAdapter();
-        var strategy = new DefaultProviderSelectionStrategy(new TestProviderScoringService());
+        var strategy = new DefaultProviderSelectionStrategy(new TestAdaptiveRoutingEngine());
         var selectionEngine = new ProviderSelectionEngine(strategy);
-        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService());
+        var fallbackHandler = new FallbackHandler(selectionEngine, new TestProviderScoringService(), new TestAdaptiveRoutingEngine());
         var responseNormalizer = new ResponseNormalizer();
         var orchestrator = new OrchestratorService(new[] { failing, fallback }, selectionEngine, fallbackHandler, responseNormalizer);
 
