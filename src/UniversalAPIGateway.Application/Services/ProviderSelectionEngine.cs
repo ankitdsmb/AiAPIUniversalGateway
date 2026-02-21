@@ -4,8 +4,15 @@ using UniversalAPIGateway.Domain.Ports;
 
 namespace UniversalAPIGateway.Application.Services;
 
-public sealed class ProviderSelectionEngine(IProviderSelectionStrategy strategy) : IProviderSelectionEngine
+public sealed class ProviderSelectionEngine : IProviderSelectionEngine
 {
+    private readonly IProviderSelectionStrategy strategy;
+
+    public ProviderSelectionEngine(IProviderSelectionStrategy strategy)
+    {
+        this.strategy = strategy ?? throw new ArgumentNullException(nameof(strategy));
+    }
+
     public ValueTask<IProviderAdapter> SelectPrimaryAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
         GatewayRequest request,

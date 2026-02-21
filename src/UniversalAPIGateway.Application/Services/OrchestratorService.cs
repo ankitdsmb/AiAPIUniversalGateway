@@ -23,9 +23,9 @@ public sealed class OrchestratorService : IOrchestratorService
             throw new InvalidOperationException("At least one provider adapter must be registered.");
         }
 
-        this.providerSelectionEngine = providerSelectionEngine;
-        this.fallbackHandler = fallbackHandler;
-        this.responseNormalizer = responseNormalizer;
+        this.providerSelectionEngine = providerSelectionEngine ?? throw new ArgumentNullException(nameof(providerSelectionEngine));
+        this.fallbackHandler = fallbackHandler ?? throw new ArgumentNullException(nameof(fallbackHandler));
+        this.responseNormalizer = responseNormalizer ?? throw new ArgumentNullException(nameof(responseNormalizer));
     }
 
     public async Task<GatewayResponse> RouteAsync(GatewayRequest request, CancellationToken cancellationToken)
