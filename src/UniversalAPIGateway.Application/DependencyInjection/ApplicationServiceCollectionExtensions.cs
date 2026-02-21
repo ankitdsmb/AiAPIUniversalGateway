@@ -8,6 +8,11 @@ public static class ApplicationServiceCollectionExtensions
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        services.AddScoped<IProviderSelectionStrategy, DefaultProviderSelectionStrategy>();
+        services.AddScoped<IProviderSelectionEngine, ProviderSelectionEngine>();
+        services.AddScoped<IFallbackHandler, FallbackHandler>();
+        services.AddScoped<IResponseNormalizer, ResponseNormalizer>();
+        services.AddScoped<IOrchestratorService, OrchestratorService>();
         services.AddScoped<IGatewayService, GatewayService>();
         return services;
     }

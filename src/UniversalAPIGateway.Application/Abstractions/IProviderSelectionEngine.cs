@@ -3,7 +3,7 @@ using UniversalAPIGateway.Domain.Ports;
 
 namespace UniversalAPIGateway.Application.Abstractions;
 
-public interface IProviderSelectionStrategy
+public interface IProviderSelectionEngine
 {
     ValueTask<IProviderAdapter> SelectPrimaryAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
