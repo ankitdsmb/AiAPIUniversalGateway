@@ -10,9 +10,11 @@ public sealed class EchoProviderAdapter : IProviderAdapter
         "Echo Provider",
         ProviderCapability.TextGeneration);
 
-    public Task<GatewayResponse> ExecuteAsync(string payload, CancellationToken cancellationToken)
+    public async Task<GatewayResponse> ExecuteAsync(string payload, CancellationToken cancellationToken)
     {
-        var response = new GatewayResponse(Provider.Key.Value, payload);
-        return Task.FromResult(response);
+        cancellationToken.ThrowIfCancellationRequested();
+        await Task.Yield();
+
+        return new GatewayResponse(Provider.Key.Value, payload);
     }
 }

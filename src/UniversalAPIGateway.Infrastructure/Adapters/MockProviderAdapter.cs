@@ -3,11 +3,11 @@ using UniversalAPIGateway.Domain.Ports;
 
 namespace UniversalAPIGateway.Infrastructure.Adapters;
 
-public sealed class ReverseProviderAdapter : IProviderAdapter
+public sealed class MockProviderAdapter : IProviderAdapter
 {
     public Provider Provider { get; } = new(
-        new ProviderKey("reverse"),
-        "Reverse Provider",
+        new ProviderKey("mock"),
+        "Mock Provider",
         ProviderCapability.TextGeneration);
 
     public async Task<GatewayResponse> ExecuteAsync(string payload, CancellationToken cancellationToken)
@@ -15,7 +15,6 @@ public sealed class ReverseProviderAdapter : IProviderAdapter
         cancellationToken.ThrowIfCancellationRequested();
         await Task.Yield();
 
-        var reversed = new string(payload.Reverse().ToArray());
-        return new GatewayResponse(Provider.Key.Value, reversed);
+        return new GatewayResponse(Provider.Key.Value, $"mock::{payload}");
     }
 }
