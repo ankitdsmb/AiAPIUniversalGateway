@@ -9,3 +9,15 @@
 /workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/refint/UniversalAPIGateway.Domain.dll
 /workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/UniversalAPIGateway.Domain.pdb
 /workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/ref/UniversalAPIGateway.Domain.dll
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\bin\Debug\net8.0\UniversalAPIGateway.Domain.deps.json
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\bin\Debug\net8.0\UniversalAPIGateway.Domain.dll
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\bin\Debug\net8.0\UniversalAPIGateway.Domain.pdb
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\UniversalAPIGateway.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\UniversalAPIGateway.Domain.AssemblyInfoInputs.cache
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\UniversalAPIGateway.Domain.AssemblyInfo.cs
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\UniversalAPIGateway.Domain.csproj.CoreCompileInputs.cache
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\UniversalAPIGateway.Domain.sourcelink.json
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\UniversalAPIGateway.Domain.dll
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\refint\UniversalAPIGateway.Domain.dll
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\UniversalAPIGateway.Domain.pdb
+C:\docker\AiAPIUniversalGateway\src\UniversalAPIGateway.Domain\obj\Debug\net8.0\ref\UniversalAPIGateway.Domain.dll
