@@ -10,6 +10,10 @@ public sealed class ProviderRegistryService(
 {
     private readonly TimeSpan heartbeatTimeout = TimeSpan.FromSeconds(
         Math.Max(5, configuration.GetValue<int?>("ProviderRegistry:HeartbeatTimeoutSeconds") ?? 90));
+    private readonly TimeSpan staleSweepInterval = TimeSpan.FromSeconds(
+        Math.Max(1, configuration.GetValue<int?>("ProviderRegistry:StaleSweepIntervalSeconds") ?? 5));
+    private readonly SemaphoreSlim staleSweepLock = new(1, 1);
+    private long lastStaleSweepTicks;
 
     public async Task<ProviderRegistryEntry> RegisterAsync(ProviderRegistration registration, CancellationToken cancellationToken)
     {
@@ -63,10 +67,30 @@ public sealed class ProviderRegistryService(
 
     private async Task DisableStaleProvidersAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {
-        var disabledKeys = await persistence.DisableStaleAsync(now.Subtract(heartbeatTimeout), cancellationToken);
-        foreach (var providerKey in disabledKeys)
+        if (now.UtcTicks - Interlocked.Read(ref lastStaleSweepTicks) < staleSweepInterval.Ticks)
         {
-            await cache.RemoveAsync(providerKey, cancellationToken);
+            return;
+        }
+
+        await staleSweepLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (now.UtcTicks - lastStaleSweepTicks < staleSweepInterval.Ticks)
+            {
+                return;
+            }
+
+            var disabledKeys = await persistence.DisableStaleAsync(now.Subtract(heartbeatTimeout), cancellationToken);
+            foreach (var providerKey in disabledKeys)
+            {
+                await cache.RemoveAsync(providerKey, cancellationToken);
+            }
+
+            Interlocked.Exchange(ref lastStaleSweepTicks, now.UtcTicks);
+        }
+        finally
+        {
+            staleSweepLock.Release();
         }
     }
 }
