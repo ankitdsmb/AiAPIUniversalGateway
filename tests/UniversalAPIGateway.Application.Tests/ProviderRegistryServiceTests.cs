@@ -88,6 +88,20 @@ public sealed class ProviderRegistryServiceTests
             return Task.FromResult(entry);
         }
 
+        public Task<IReadOnlyCollection<ProviderRegistryEntry>> GetAllAsync(CancellationToken cancellationToken) =>
+            Task.FromResult((IReadOnlyCollection<ProviderRegistryEntry>)Entries.Values.ToArray());
+
+        public Task<bool> SetEnabledAsync(string providerKey, bool isEnabled, DateTimeOffset updatedAtUtc, CancellationToken cancellationToken)
+        {
+            if (!Entries.TryGetValue(providerKey, out var entry))
+            {
+                return Task.FromResult(false);
+            }
+
+            Entries[providerKey] = entry with { IsEnabled = isEnabled, UpdatedAtUtc = updatedAtUtc };
+            return Task.FromResult(true);
+        }
+
         public Task<IReadOnlyCollection<string>> DisableStaleAsync(DateTimeOffset staleBeforeUtc, CancellationToken cancellationToken)
         {
             var disabled = new List<string>();

@@ -235,6 +235,29 @@ public sealed class ProviderAdapterTests
             return Task.CompletedTask;
         }
 
+        public Task<IReadOnlyCollection<string>> DisableUnhealthyProvidersAsync(CancellationToken cancellationToken) =>
+            Task.FromResult((IReadOnlyCollection<string>)Array.Empty<string>());
+
+        public Task<IReadOnlyCollection<string>> RecoverProvidersAsync(CancellationToken cancellationToken) =>
+            Task.FromResult((IReadOnlyCollection<string>)Array.Empty<string>());
+
+        public Task<ProviderHealthStatus> GetStatusAsync(string providerKey, CancellationToken cancellationToken)
+        {
+            if (!states.TryGetValue(providerKey, out var reason))
+            {
+                return Task.FromResult(ProviderHealthStatus.Healthy);
+            }
+
+            var status = reason switch
+            {
+                "quota_exceeded" => ProviderHealthStatus.QuotaExceeded,
+                "rate_limited" => ProviderHealthStatus.RateLimited,
+                _ => ProviderHealthStatus.Degraded
+            };
+
+            return Task.FromResult(status);
+        }
+
         public string? GetState(string providerKey) => states.GetValueOrDefault(providerKey);
     }
 }
