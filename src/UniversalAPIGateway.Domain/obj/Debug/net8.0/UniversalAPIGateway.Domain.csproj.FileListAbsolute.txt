@@ -1,0 +1,11 @@
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/bin/Debug/net8.0/UniversalAPIGateway.Domain.deps.json
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/bin/Debug/net8.0/UniversalAPIGateway.Domain.dll
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/bin/Debug/net8.0/UniversalAPIGateway.Domain.pdb
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/UniversalAPIGateway.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/UniversalAPIGateway.Domain.AssemblyInfoInputs.cache
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/UniversalAPIGateway.Domain.AssemblyInfo.cs
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/UniversalAPIGateway.Domain.csproj.CoreCompileInputs.cache
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/UniversalAPIGateway.Domain.dll
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/refint/UniversalAPIGateway.Domain.dll
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/UniversalAPIGateway.Domain.pdb
+/workspace/AiAPIUniversalGateway/src/UniversalAPIGateway.Domain/obj/Debug/net8.0/ref/UniversalAPIGateway.Domain.dll
