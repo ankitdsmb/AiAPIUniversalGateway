@@ -109,3 +109,15 @@ Deployment requirements:
 - Adapter and strategy patterns explicitly represented.
 - Async-first call chain required in all provider paths.
 - Docker-ready deployment and scaling plan defined.
+
+
+## 7. Failure and Scale QA Scenarios
+### Provider failure drill
+- Trigger: primary provider times out for 30s window.
+- Expected orchestration behavior: strategy excludes unhealthy provider using resilience state and routes to fallback adapter.
+- Pass criteria: unified API contract preserved, request returns either successful fallback response or normalized transient error.
+
+### Scale drill (1M/day with burst)
+- Trigger: synthetic load ramps from 12 req/s to 230 req/s.
+- Expected platform behavior: gateway and orchestrator scale horizontally, quota consistency remains atomic, score service freshness maintained.
+- Pass criteria: p95 latency remains within SLO, no quota ledger mismatches, and no dependency inversion violations introduced.
