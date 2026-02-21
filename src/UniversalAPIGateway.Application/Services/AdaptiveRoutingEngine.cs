@@ -76,20 +76,25 @@ public sealed class AdaptiveRoutingEngine(
         bool succeeded,
         TimeSpan latency,
         string? responsePayload,
+        int tokenUsage,
         CancellationToken cancellationToken)
     {
         var taskType = taskClassifier.Classify(request);
         var qualityScore = ComputeQualityScore(succeeded, responsePayload);
 
-        await performanceStore.UpdateOutcomeAsync(providerId, taskType, succeeded, latency, qualityScore, cancellationToken);
+        await performanceStore.UpdateOutcomeAsync(providerId, taskType, succeeded, latency, qualityScore, tokenUsage, cancellationToken);
     }
 
     private static double Score(ProviderPerformance performance)
     {
         var latencyScore = 1d / (1d + (performance.Latency.TotalMilliseconds / 1_000d));
-        var observedScore = (performance.SuccessRate * 0.5d)
-                            + (performance.QualityScore * 0.35d)
-                            + (latencyScore * 0.15d);
+        var tokenEfficiencyScore = 1d / (1d + (performance.TokenUsage / 800d));
+        var stabilityScore = 1d - performance.FailureRate;
+        var observedScore = (performance.SuccessRate * 0.4d)
+                            + (performance.QualityScore * 0.25d)
+                            + (latencyScore * 0.15d)
+                            + (tokenEfficiencyScore * 0.1d)
+                            + (stabilityScore * 0.1d);
 
         var confidence = Math.Clamp(performance.SampleSize / ConfidenceSampleThreshold, 0d, 1d);
         return (observedScore * confidence) + (BaselineScore * (1d - confidence));
