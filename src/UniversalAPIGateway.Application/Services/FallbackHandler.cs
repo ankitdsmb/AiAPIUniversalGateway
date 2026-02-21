@@ -5,11 +5,22 @@ using UniversalAPIGateway.Domain.Ports;
 
 namespace UniversalAPIGateway.Application.Services;
 
-public sealed class FallbackHandler(
-    IProviderSelectionEngine selectionEngine,
-    IProviderScoringService providerScoringService,
-    IAdaptiveRoutingEngine adaptiveRoutingEngine) : IFallbackHandler
+public sealed class FallbackHandler : IFallbackHandler
 {
+    private readonly IProviderSelectionEngine selectionEngine;
+    private readonly IProviderScoringService providerScoringService;
+    private readonly IAdaptiveRoutingEngine adaptiveRoutingEngine;
+
+    public FallbackHandler(
+        IProviderSelectionEngine selectionEngine,
+        IProviderScoringService providerScoringService,
+        IAdaptiveRoutingEngine adaptiveRoutingEngine)
+    {
+        this.selectionEngine = selectionEngine ?? throw new ArgumentNullException(nameof(selectionEngine));
+        this.providerScoringService = providerScoringService ?? throw new ArgumentNullException(nameof(providerScoringService));
+        this.adaptiveRoutingEngine = adaptiveRoutingEngine ?? throw new ArgumentNullException(nameof(adaptiveRoutingEngine));
+    }
+
     public async Task<GatewayResponse> ExecuteAsync(
         IReadOnlyCollection<IProviderAdapter> adapters,
         GatewayRequest request,
