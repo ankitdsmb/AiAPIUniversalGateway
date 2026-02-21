@@ -28,7 +28,7 @@ public sealed class PostgreSqlProviderRegistryRepository(string connectionString
         command.Parameters.AddWithValue("provider_key", entry.ProviderKey);
         command.Parameters.AddWithValue("display_name", entry.DisplayName);
         command.Parameters.AddWithValue("endpoint", entry.Endpoint);
-        command.Parameters.AddWithValue("capabilities", entry.Capabilities);
+        command.Parameters.AddWithValue("capabilities", NpgsqlTypes.NpgsqlDbType.Jsonb, entry.Capabilities);
         command.Parameters.AddWithValue("is_enabled", entry.IsEnabled);
         command.Parameters.AddWithValue("last_heartbeat_utc", entry.LastHeartbeatUtc.UtcDateTime);
         command.Parameters.AddWithValue("updated_at_utc", entry.UpdatedAtUtc.UtcDateTime);
@@ -160,11 +160,17 @@ public sealed class PostgreSqlProviderRegistryRepository(string connectionString
                 provider_key TEXT PRIMARY KEY,
                 display_name TEXT NOT NULL,
                 endpoint TEXT NOT NULL,
-                capabilities TEXT NOT NULL,
+                capabilities JSONB NOT NULL,
                 is_enabled BOOLEAN NOT NULL,
-                last_heartbeat_utc TIMESTAMP WITHOUT TIME ZONE NOT NULL,
-                updated_at_utc TIMESTAMP WITHOUT TIME ZONE NOT NULL
+                last_heartbeat_utc TIMESTAMPTZ NOT NULL,
+                updated_at_utc TIMESTAMPTZ NOT NULL
             );
+
+            CREATE INDEX IF NOT EXISTS ix_provider_registry_enabled_heartbeat
+                ON provider_registry (is_enabled, last_heartbeat_utc);
+
+            CREATE INDEX IF NOT EXISTS ix_provider_registry_updated_at
+                ON provider_registry (updated_at_utc DESC);
             """;
 
         await using var command = new NpgsqlCommand(sql, connection);
