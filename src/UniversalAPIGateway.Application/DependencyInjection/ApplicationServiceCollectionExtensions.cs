@@ -20,6 +20,7 @@ public static class ApplicationServiceCollectionExtensions
         services.AddScoped<IOrchestratorService, OrchestratorService>();
         services.AddScoped<IGatewayService, GatewayService>();
         services.AddScoped<IProviderRegistryService, ProviderRegistryService>();
+        services.AddScoped<IConsensusEvaluationService, ConsensusEvaluationService>();
         return services;
     }
 }
