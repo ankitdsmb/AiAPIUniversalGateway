@@ -51,6 +51,26 @@ public sealed class AdaptiveRoutingEngineTests
         Assert.Equal("explore", selected?.Provider.Key.Value);
     }
 
+    [Fact]
+    public async Task SelectAdapterAsync_PrefersProviderWithSufficientHistory_WhenNewProviderHasFewSamples()
+    {
+        var classifier = new KeywordTaskClassifier();
+        var store = new InMemoryProviderPerformanceStore();
+        var random = new StubRandomSource(0.95d, 0);
+        var engine = new AdaptiveRoutingEngine(classifier, store, random);
+
+        var reliableProvider = new SuccessAdapter(new ProviderKey("reliable"), ProviderCapability.TextGeneration);
+        var newProvider = new SuccessAdapter(new ProviderKey("new"), ProviderCapability.TextGeneration);
+        var adapters = new IProviderAdapter[] { reliableProvider, newProvider };
+
+        await SeedAsync(store, "reliable", TaskType.Chat, successRate: 0.9, latencyMs: 140, quality: 0.9);
+        await store.UpdateOutcomeAsync("new", TaskType.Chat, succeeded: true, TimeSpan.FromMilliseconds(80), qualityScore: 1.0, CancellationToken.None);
+
+        var selected = await engine.SelectAdapterAsync(adapters, new GatewayRequest(new ProviderKey("auto"), "hello how are you"), null, CancellationToken.None);
+
+        Assert.Equal("reliable", selected?.Provider.Key.Value);
+    }
+
     private static async Task SeedAsync(IProviderPerformanceStore store, string providerId, TaskType taskType, double successRate, int latencyMs, double quality)
     {
         var successSamples = (int)Math.Round(successRate * 10, MidpointRounding.AwayFromZero);
